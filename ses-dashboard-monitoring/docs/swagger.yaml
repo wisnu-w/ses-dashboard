@@ -1,0 +1,333 @@
+basePath: /
+definitions:
+  http.MetricsResponse:
+    properties:
+      bounce_count:
+        type: integer
+      bounce_rate:
+        type: number
+      click_count:
+        type: integer
+      complaint_count:
+        type: integer
+      delivery_count:
+        type: integer
+      delivery_rate:
+        type: number
+      open_count:
+        type: integer
+      send_count:
+        type: integer
+      total_events:
+        type: integer
+    type: object
+  sesevent.DailyMetrics:
+    properties:
+      bounce_count:
+        type: integer
+      bounce_rate:
+        type: number
+      click_count:
+        type: integer
+      complaint_count:
+        type: integer
+      date:
+        type: string
+      delivery_count:
+        type: integer
+      delivery_rate:
+        type: number
+      open_count:
+        type: integer
+      send_count:
+        type: integer
+      total_events:
+        type: integer
+    type: object
+  sesevent.Event:
+    properties:
+      bounceSubType:
+        type: string
+      bounceType:
+        type: string
+      createdAt:
+        type: string
+      diagnosticCode:
+        type: string
+      email:
+        type: string
+      eventTimestamp:
+        type: string
+      eventType:
+        type: string
+      id:
+        format: int64
+        type: integer
+      messageID:
+        type: string
+      processingTimeMillis:
+        type: integer
+      reason:
+        type: string
+      recipients:
+        description: JSON array
+        type: string
+      remoteMtaIp:
+        type: string
+      reportingMTA:
+        type: string
+      smtpResponse:
+        type: string
+      source:
+        type: string
+      status:
+        type: string
+      tags:
+        description: JSON map
+        type: string
+    type: object
+  sesevent.HourlyMetrics:
+    properties:
+      bounce_count:
+        type: integer
+      bounce_rate:
+        type: number
+      click_count:
+        type: integer
+      complaint_count:
+        type: integer
+      delivery_count:
+        type: integer
+      delivery_rate:
+        type: number
+      hour:
+        type: string
+      open_count:
+        type: integer
+      send_count:
+        type: integer
+      total_events:
+        type: integer
+    type: object
+  sesevent.MonthlyMetrics:
+    properties:
+      bounce_count:
+        type: integer
+      bounce_rate:
+        type: number
+      click_count:
+        type: integer
+      complaint_count:
+        type: integer
+      delivery_count:
+        type: integer
+      delivery_rate:
+        type: number
+      month:
+        type: string
+      open_count:
+        type: integer
+      send_count:
+        type: integer
+      total_events:
+        type: integer
+    type: object
+  usecase.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  usecase.LoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/user.User'
+    type: object
+  user.User:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for monitoring AWS SES events
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: SES Monitoring API
+  version: "1.0"
+paths:
+  /api/events:
+    get:
+      description: Retrieve list of SES events
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/sesevent.Event'
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get SES events
+      tags:
+      - monitoring
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/usecase.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/usecase.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login user
+      tags:
+      - auth
+  /api/metrics:
+    get:
+      description: Retrieve overall SES metrics with counts and rates
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.MetricsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get overall metrics
+      tags:
+      - monitoring
+  /api/metrics/daily:
+    get:
+      description: Retrieve daily SES metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/sesevent.DailyMetrics'
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get daily metrics
+      tags:
+      - monitoring
+  /api/metrics/hourly:
+    get:
+      description: Retrieve hourly SES metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/sesevent.HourlyMetrics'
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get hourly metrics
+      tags:
+      - monitoring
+  /api/metrics/monthly:
+    get:
+      description: Retrieve monthly SES metrics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/sesevent.MonthlyMetrics'
+              type: array
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get monthly metrics
+      tags:
+      - monitoring
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

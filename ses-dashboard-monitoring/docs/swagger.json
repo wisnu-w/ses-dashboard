@@ -1,0 +1,513 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for monitoring AWS SES events",
+        "title": "SES Monitoring API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve list of SES events",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Get SES events",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/sesevent.Event"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "description": "Authenticate user and return JWT token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usecase.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/usecase.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/metrics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve overall SES metrics with counts and rates",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Get overall metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.MetricsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/metrics/daily": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve daily SES metrics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Get daily metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/sesevent.DailyMetrics"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/metrics/hourly": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve hourly SES metrics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Get hourly metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/sesevent.HourlyMetrics"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/metrics/monthly": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve monthly SES metrics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "monitoring"
+                ],
+                "summary": "Get monthly metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/sesevent.MonthlyMetrics"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "http.MetricsResponse": {
+            "type": "object",
+            "properties": {
+                "bounce_count": {
+                    "type": "integer"
+                },
+                "bounce_rate": {
+                    "type": "number"
+                },
+                "click_count": {
+                    "type": "integer"
+                },
+                "complaint_count": {
+                    "type": "integer"
+                },
+                "delivery_count": {
+                    "type": "integer"
+                },
+                "delivery_rate": {
+                    "type": "number"
+                },
+                "open_count": {
+                    "type": "integer"
+                },
+                "send_count": {
+                    "type": "integer"
+                },
+                "total_events": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sesevent.DailyMetrics": {
+            "type": "object",
+            "properties": {
+                "bounce_count": {
+                    "type": "integer"
+                },
+                "bounce_rate": {
+                    "type": "number"
+                },
+                "click_count": {
+                    "type": "integer"
+                },
+                "complaint_count": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "delivery_count": {
+                    "type": "integer"
+                },
+                "delivery_rate": {
+                    "type": "number"
+                },
+                "open_count": {
+                    "type": "integer"
+                },
+                "send_count": {
+                    "type": "integer"
+                },
+                "total_events": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sesevent.Event": {
+            "type": "object",
+            "properties": {
+                "bounceSubType": {
+                    "type": "string"
+                },
+                "bounceType": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "diagnosticCode": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "eventTimestamp": {
+                    "type": "string"
+                },
+                "eventType": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "messageID": {
+                    "type": "string"
+                },
+                "processingTimeMillis": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "recipients": {
+                    "description": "JSON array",
+                    "type": "string"
+                },
+                "remoteMtaIp": {
+                    "type": "string"
+                },
+                "reportingMTA": {
+                    "type": "string"
+                },
+                "smtpResponse": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tags": {
+                    "description": "JSON map",
+                    "type": "string"
+                }
+            }
+        },
+        "sesevent.HourlyMetrics": {
+            "type": "object",
+            "properties": {
+                "bounce_count": {
+                    "type": "integer"
+                },
+                "bounce_rate": {
+                    "type": "number"
+                },
+                "click_count": {
+                    "type": "integer"
+                },
+                "complaint_count": {
+                    "type": "integer"
+                },
+                "delivery_count": {
+                    "type": "integer"
+                },
+                "delivery_rate": {
+                    "type": "number"
+                },
+                "hour": {
+                    "type": "string"
+                },
+                "open_count": {
+                    "type": "integer"
+                },
+                "send_count": {
+                    "type": "integer"
+                },
+                "total_events": {
+                    "type": "integer"
+                }
+            }
+        },
+        "sesevent.MonthlyMetrics": {
+            "type": "object",
+            "properties": {
+                "bounce_count": {
+                    "type": "integer"
+                },
+                "bounce_rate": {
+                    "type": "number"
+                },
+                "click_count": {
+                    "type": "integer"
+                },
+                "complaint_count": {
+                    "type": "integer"
+                },
+                "delivery_count": {
+                    "type": "integer"
+                },
+                "delivery_rate": {
+                    "type": "number"
+                },
+                "month": {
+                    "type": "string"
+                },
+                "open_count": {
+                    "type": "integer"
+                },
+                "send_count": {
+                    "type": "integer"
+                },
+                "total_events": {
+                    "type": "integer"
+                }
+            }
+        },
+        "usecase.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "usecase.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/user.User"
+                }
+            }
+        },
+        "user.User": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

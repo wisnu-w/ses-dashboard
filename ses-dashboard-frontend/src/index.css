@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #cbd5e1, #94a3b8);
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #94a3b8, #64748b);
+}
+
+/* Smooth transitions */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Custom utilities */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Card hover effects */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:from-blue-700 hover:to-blue-800 hover:shadow-xl transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-xl hover:bg-gray-200 transition-all duration-200 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+}

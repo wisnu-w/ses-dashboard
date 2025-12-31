@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ses-monitoring-db
+    environment:
+      POSTGRES_DB: ses_monitoring
+      POSTGRES_USER: ses_user
+      POSTGRES_PASSWORD: ses_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - ses-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ses_user -d ses_monitoring"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./ses-dashboard-monitoring
+      dockerfile: Dockerfile
+    container_name: ses-monitoring-api
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=ses_user
+      - DB_PASSWORD=ses_password
+      - DB_NAME=ses_monitoring
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ses-network
+    volumes:
+      - ./ses-dashboard-monitoring/config:/app/config
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./ses-dashboard-frontend
+      dockerfile: Dockerfile
+    container_name: ses-monitoring-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - ses-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  ses-network:
+    driver: bridge
