@@ -52,7 +52,12 @@ A comprehensive monitoring dashboard for AWS SES (Simple Email Service) events w
 ## 🛠️ Quick Start
 
 ### 1. Clone the Repository
-```bash\ngit clone <repository-url>\ncd ses-dashboard-monitoring\n```\n\n### 2. Run Installation Script
+```bash
+git clone <repository-url>
+cd ses-dashboard-monitoring
+```
+
+### 2. Run Installation Script
 ```bash
 chmod +x install.sh
 ./install.sh
@@ -63,7 +68,143 @@ The installation script will:
 - ✅ Create necessary directories
 - ✅ Build and start all services
 - ✅ Run database migrations automatically
-- ✅ Display service URLs and credentials\n\n### 3. Access the Application\n\n| Service | URL | Description |\n|---------|-----|-------------|\n| **Application** | http://localhost | Complete SES Dashboard |\n| **API Documentation** | http://localhost/swagger/index.html | Swagger UI |\n| **Database** | localhost:5432 | PostgreSQL (admin access) |\n\n### 4. Default Credentials\n```\nUsername: admin\nPassword: admin123\n```\n\n**That's it!** The `install.sh` script handles everything - from building Docker images to database initialization. No manual steps required.\n\n## 🏗️ Architecture\n\n```\n┌─────────────────┐    ┌─────────────────┐\n│   Frontend      │    │   Backend       │\n│   (Node.js +    │◄──►│   (Go/Gin)      │\n│    Express)     │    │   Port: 8080    │\n│   Port: 80      │    └─────────────────┘\n└─────────────────┘              │\n          │                      │\n          │        ┌─────────────────┐\n          └────────┤   PostgreSQL    │\n                   │   Port: 5432    │\n                   └─────────────────┘\n```\n\n### Components\n\n- **Frontend**: React 19 + TypeScript + Tailwind CSS served by Express.js\n- **Backend**: Go 1.25 + Gin framework with clean architecture\n- **Database**: PostgreSQL 15 with optimized schema and indexes\n- **Proxy**: Express.js handles API routing and static file serving\n\n## 📁 Project Structure\n\n```\nses-dashboard-monitoring/\n├── ses-dashboard-monitoring/          # Backend (Go)\n│   ├── cmd/api/                      # Application entry point\n│   │   └── main.go                   # Main application file\n│   ├── internal/                     # Internal packages\n│   │   ├── config/                   # Configuration management\n│   │   ├── delivery/http/            # HTTP handlers and middleware\n│   │   ├── domain/                   # Business logic and entities\n│   │   │   ├── sesevent/             # SES event domain\n│   │   │   ├── settings/             # Settings domain\n│   │   │   ├── suppression/          # Suppression domain\n│   │   │   └── user/                 # User domain\n│   │   ├── infrastructure/           # External dependencies\n│   │   │   ├── aws/                  # AWS SES client\n│   │   │   ├── database/             # Database connection\n│   │   │   └── repository/           # Data access layer\n│   │   ├── services/                 # Background services\n│   │   │   ├── cleanup_service.go    # Data cleanup automation\n│   │   │   └── sync_service.go       # AWS sync automation\n│   │   └── usecase/                  # Business use cases\n│   ├── config/                       # Configuration files\n│   │   └── config.yaml               # Application configuration\n│   ├── docs/                         # Swagger documentation\n│   └── Dockerfile                    # Backend Docker image\n├── ses-dashboard-frontend/           # Frontend (React + Node.js)\n│   ├── src/                         # React source code\n│   │   ├── components/              # Reusable React components\n│   │   │   ├── Layout.tsx           # Main layout component\n│   │   │   ├── Charts.tsx           # Chart components\n│   │   │   └── EventsTable.tsx      # Events table component\n│   │   ├── pages/                   # Page components\n│   │   │   ├── DashboardPage.tsx    # Main dashboard\n│   │   │   ├── EventsPage.tsx       # Events listing\n│   │   │   ├── AnalyticsPage.tsx    # Analytics charts\n│   │   │   ├── SuppressionPage.tsx  # Suppression management\n│   │   │   ├── UsersPage.tsx        # User management\n│   │   │   └── SettingsPage.tsx     # System settings\n│   │   ├── services/                # API services\n│   │   │   └── api.ts               # API client with Axios\n│   │   └── types/                   # TypeScript type definitions\n│   ├── server.js                    # Express server with proxy\n│   └── Dockerfile                   # Frontend Docker image\n├── docker-compose.yml               # Docker Compose configuration\n├── init.sql                         # Database initialization\n├── install.sh                       # Installation script\n└── README.md                        # This file\n```\n\n## ⚙️ Configuration\n\n### Environment Variables\n\n| Variable | Description | Default |\n|----------|-------------|---------|\n| `DB_HOST` | Database host | `postgres` |\n| `DB_PORT` | Database port | `5432` |\n| `DB_USER` | Database username | `ses_user` |\n| `DB_PASSWORD` | Database password | `ses_password` |\n| `DB_NAME` | Database name | `ses_monitoring` |\n| `JWT_SECRET` | JWT signing secret | `your-super-secret-jwt-key` |\n| `PORT` | Backend server port | `8080` |\n| `BACKEND_URL` | Backend URL for frontend proxy | `http://backend:8080` |\n\n### Database Schema\n\nThe application uses 4 main tables:\n\n1. **users** - User accounts with role-based access\n2. **ses_events** - SES event logs with full event data\n3. **app_settings** - Configurable application settings\n4. **suppressions** - Email suppression list management\n\n### AWS SES Configuration\n\nConfigure AWS SES settings through the admin panel:\n\n1. Navigate to **Admin → Settings**\n2. Configure AWS credentials and region\n3. Test the connection\n4. Enable AWS integration\n\n### SNS Webhook Setup\n\nTo receive SES events via SNS:\n\n1. Create an SNS topic in AWS\n2. Subscribe your endpoint: `http://your-domain/sns/ses`\n3. Configure SES to publish events to the SNS topic\n4. Events will be automatically processed and stored\n\n## 🔧 Development
+- ✅ Display service URLs and credentials
+
+### 3. Access the Application
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Application** | http://localhost | Complete SES Dashboard |
+| **API Documentation** | http://localhost/swagger/index.html | Swagger UI |
+| **Database** | localhost:5432 | PostgreSQL (admin access) |
+
+### 4. Default Credentials
+```
+Username: admin
+Password: admin123
+```
+
+**That's it!** The `install.sh` script handles everything - from building Docker images to database migrations. No manual steps required.
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Backend       │
+│   (Node.js +    │◄──►│   (Go/Gin)      │
+│    Express)     │    │   Port: 8080    │
+│   Port: 80      │    └─────────────────┘
+└─────────────────┘              │
+          │                      │
+          │        ┌─────────────────┐
+          └────────┤   PostgreSQL    │
+                   │   Port: 5432    │
+                   └─────────────────┘
+```
+
+### Components
+
+- **Frontend**: React 19 + TypeScript + Tailwind CSS served by Express.js
+- **Backend**: Go 1.25 + Gin framework with clean architecture
+- **Database**: PostgreSQL 15 with optimized schema and indexes
+- **Proxy**: Express.js handles API routing and static file serving
+
+## 📁 Project Structure
+
+```
+ses-dashboard-monitoring/
+├── ses-dashboard-monitoring/          # Backend (Go)
+│   ├── cmd/api/                      # Application entry point
+│   │   └── main.go                   # Main application file
+│   ├── cmd/migrate/                  # Migration tool
+│   │   └── main.go                   # Database migration utility
+│   ├── internal/                     # Internal packages
+│   │   ├── config/                   # Configuration management
+│   │   ├── delivery/http/            # HTTP handlers and middleware
+│   │   ├── domain/                   # Business logic and entities
+│   │   │   ├── sesevent/             # SES event domain
+│   │   │   ├── settings/             # Settings domain
+│   │   │   ├── suppression/          # Suppression domain
+│   │   │   └── user/                 # User domain
+│   │   ├── infrastructure/           # External dependencies
+│   │   │   ├── aws/                  # AWS SES client
+│   │   │   ├── database/             # Database connection & migrations
+│   │   │   └── repository/           # Data access layer
+│   │   ├── services/                 # Background services
+│   │   │   ├── cleanup_service.go    # Data cleanup automation
+│   │   │   └── sync_service.go       # AWS sync automation
+│   │   └── usecase/                  # Business use cases
+│   ├── config/                       # Configuration files
+│   │   └── config.yaml               # Application configuration
+│   ├── docs/                         # Swagger documentation
+│   ├── Makefile                      # Build and development commands
+│   └── Dockerfile                    # Backend Docker image
+├── ses-dashboard-frontend/           # Frontend (React + Node.js)
+│   ├── src/                         # React source code
+│   │   ├── components/              # Reusable React components
+│   │   │   ├── Layout.tsx           # Main layout component
+│   │   │   ├── Charts.tsx           # Chart components
+│   │   │   └── EventsTable.tsx      # Events table component
+│   │   ├── pages/                   # Page components
+│   │   │   ├── DashboardPage.tsx    # Main dashboard
+│   │   │   ├── EventsPage.tsx       # Events listing
+│   │   │   ├── AnalyticsPage.tsx    # Analytics charts
+│   │   │   ├── SuppressionPage.tsx  # Suppression management
+│   │   │   ├── UsersPage.tsx        # User management
+│   │   │   └── SettingsPage.tsx     # System settings
+│   │   ├── services/                # API services
+│   │   │   └── api.ts               # API client with Axios
+│   │   └── types/                   # TypeScript type definitions
+│   ├── server.js                    # Express server with proxy
+│   └── Dockerfile                   # Frontend Docker image
+├── docker-compose.yml               # Docker Compose configuration
+├── install.sh                       # Installation script
+└── README.md                        # This file
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_HOST` | Database host | `postgres` |
+| `DB_PORT` | Database port | `5432` |
+| `DB_USER` | Database username | `ses_user` |
+| `DB_PASSWORD` | Database password | `ses_password` |
+| `DB_NAME` | Database name | `ses_monitoring` |
+| `JWT_SECRET` | JWT signing secret | `your-super-secret-jwt-key` |
+| `PORT` | Backend server port | `8080` |
+| `BACKEND_URL` | Backend URL for frontend proxy | `http://backend:8080` |
+
+### Database Schema
+
+The application uses 4 main tables:
+
+1. **users** - User accounts with role-based access
+2. **ses_events** - SES event logs with full event data
+3. **app_settings** - Configurable application settings
+4. **suppressions** - Email suppression list management
+
+### AWS SES Configuration
+
+Configure AWS SES settings through the admin panel:
+
+1. Navigate to **Admin → Settings**
+2. Configure AWS credentials and region
+3. Test the connection
+4. Enable AWS integration
+
+### SNS Webhook Setup
+
+To receive SES events via SNS:
+
+1. Create an SNS topic in AWS
+2. Subscribe your endpoint: `http://your-domain/sns/ses`
+3. Configure SES to publish events to the SNS topic
+4. Events will be automatically processed and stored
+
+## 🔧 Development
 
 > **Note:** For production deployment, simply use `./install.sh`. The sections below are for development purposes only.
 
@@ -83,7 +224,23 @@ make migrate-down
 make migrate-version
 ```
 
-### Local Development Setup\n\n1. **Backend Development:**\n```bash\ncd ses-dashboard-monitoring\ngo mod download\ngo run cmd/api/main.go\n```\n\n2. **Frontend Development:**\n```bash\ncd ses-dashboard-frontend\nnpm install\nnpm run dev\n```\n\n3. **Database Setup:**
+### Local Development Setup
+
+1. **Backend Development:**
+```bash
+cd ses-dashboard-monitoring
+go mod download
+go run cmd/api/main.go
+```
+
+2. **Frontend Development:**
+```bash
+cd ses-dashboard-frontend
+npm install
+npm run dev
+```
+
+3. **Database Setup:**
 ```bash
 # Start PostgreSQL only
 docker-compose up postgres -d
@@ -91,4 +248,298 @@ docker-compose up postgres -d
 # Run migrations
 cd ses-dashboard-monitoring
 make migrate-up
-```\n\n### Building Docker Images\n\n> **Note:** This is handled automatically by `install.sh`. Manual build only needed for development.\n\n```bash\n# Build all services\ndocker-compose build\n\n# Build specific service\ndocker-compose build backend\ndocker-compose build frontend\n```\n\n## 📊 API Documentation\n\nThe API documentation is available via Swagger UI at:\n```\nhttp://localhost/swagger/index.html\n```\n\n### Key API Endpoints\n\n#### Authentication\n| Method | Endpoint | Description |\n|--------|----------|-------------|\n| `POST` | `/api/login` | User authentication |\n| `PUT` | `/api/change-password` | Change user password |\n\n#### Events & Metrics\n| Method | Endpoint | Description |\n|--------|----------|-------------|\n| `GET` | `/api/events` | Get SES events with pagination |\n| `GET` | `/api/metrics` | Get dashboard metrics |\n| `GET` | `/api/metrics/daily` | Get daily analytics |\n| `GET` | `/api/metrics/monthly` | Get monthly analytics |\n| `GET` | `/api/metrics/hourly` | Get hourly analytics |\n\n#### Suppression Management\n| Method | Endpoint | Description |\n|--------|----------|-------------|\n| `GET` | `/api/suppression` | Get suppression list |\n| `POST` | `/api/suppression` | Add single email to suppression |\n| `POST` | `/api/suppression/bulk` | **Bulk add** multiple emails |\n| `DELETE` | `/api/suppression/bulk` | **Bulk remove** multiple emails |\n| `DELETE` | `/api/suppression/:email` | Remove single email |\n| `GET` | `/api/suppression/:email/status` | Check email AWS status |\n| `POST` | `/api/suppression/sync` | Trigger AWS sync |\n| `GET` | `/api/suppression/sync/status` | Get sync status |\n\n#### Administration (Admin Only)\n| Method | Endpoint | Description |\n|--------|----------|-------------|\n| `GET` | `/api/users` | Get all users |\n| `POST` | `/api/users` | Create new user |\n| `PUT` | `/api/users/:id/reset-password` | Reset user password |\n| `PUT` | `/api/users/:id/disable` | Disable user account |\n| `DELETE` | `/api/users/:id` | Delete user account |\n| `GET` | `/api/settings/aws` | Get AWS settings |\n| `PUT` | `/api/settings/aws` | Update AWS settings |\n| `POST` | `/api/settings/aws/test` | Test AWS connection |\n| `GET` | `/api/settings/retention` | Get retention settings |\n| `PUT` | `/api/settings/retention` | Update retention settings |\n\n## 🛠️ Management Commands\n\n### Docker Compose Commands\n\n```bash\n# Start all services\ndocker-compose up -d\n\n# View logs\ndocker-compose logs -f\n\n# View specific service logs\ndocker-compose logs -f backend\ndocker-compose logs -f frontend\n\n# Stop all services\ndocker-compose down\n\n# Restart specific service\ndocker-compose restart backend\n\n# View service status\ndocker-compose ps\n\n# Execute command in container\ndocker-compose exec backend sh\n```\n\n### Database Management\n\n```bash\n# Connect to database\ndocker-compose exec postgres psql -U ses_user -d ses_monitoring\n\n# Backup database\ndocker-compose exec postgres pg_dump -U ses_user ses_monitoring > backup.sql\n\n# Restore database\ndocker-compose exec -T postgres psql -U ses_user ses_monitoring < backup.sql\n\n# View database size\ndocker-compose exec postgres psql -U ses_user -d ses_monitoring -c \"\\l+\"\n```\n\n## 🔒 Security Considerations\n\n### Production Deployment\n\n1. **Change Default Credentials:**\n   - Update admin password after first login\n   - Use strong JWT secret key (change `JWT_SECRET` environment variable)\n\n2. **Environment Variables:**\n   - Store sensitive data in environment variables\n   - Use Docker secrets for production\n   - Never commit credentials to version control\n\n3. **Network Security:**\n   - Use HTTPS in production\n   - Configure firewall rules\n   - Limit database access to application only\n   - Use reverse proxy (nginx/traefik) for SSL termination\n\n4. **AWS Security:**\n   - Use IAM roles instead of access keys when possible\n   - Limit SES permissions to minimum required\n   - Enable AWS CloudTrail for audit logging\n   - Rotate AWS credentials regularly\n\n5. **Database Security:**\n   - Use strong database passwords\n   - Enable SSL connections\n   - Regular security updates\n   - Database connection pooling\n\n## 📈 Monitoring & Logging\n\n### Application Logs\n\n```bash\n# View all logs\ndocker-compose logs -f\n\n# View specific service logs\ndocker-compose logs -f backend\ndocker-compose logs -f frontend\ndocker-compose logs -f postgres\n\n# Follow logs with timestamps\ndocker-compose logs -f -t\n```\n\n### Background Services\n\nThe application runs two background services:\n\n1. **Cleanup Service**: Automatically removes old event logs based on retention settings\n2. **Sync Service**: Periodically syncs suppression list with AWS SES\n\n### Performance Monitoring\n\nMonitor application performance through:\n- Dashboard analytics page\n- Database query performance\n- Container resource usage\n- API response times\n\n## 🚨 Troubleshooting\n\n### Common Issues\n\n1. **Port Already in Use:**\n```bash\n# Check what's using the port\nlsof -i :80\nlsof -i :8080\n\n# Stop conflicting services\nsudo systemctl stop apache2\nsudo systemctl stop nginx\n```\n\n2. **Database Connection Issues:**\n```bash\n# Check database logs\ndocker-compose logs postgres\n\n# Verify database is running\ndocker-compose ps postgres\n\n# Test database connection\ndocker-compose exec postgres psql -U ses_user -d ses_monitoring -c \"SELECT 1;\"\n```\n\n3. **Frontend Build Issues:**\n```bash\n# Clear npm cache\nnpm cache clean --force\n\n# Rebuild frontend\ndocker-compose build --no-cache frontend\n```\n\n4. **Backend API Issues:**\n```bash\n# Check backend logs\ndocker-compose logs backend\n\n# Verify configuration\ndocker-compose exec backend env | grep DB_\n\n# Test API endpoint\ncurl http://localhost:8080/api/health\n```\n\n5. **AWS Integration Issues:**\n```bash\n# Test AWS credentials\ndocker-compose exec backend aws ses describe-configuration-sets\n\n# Check AWS settings in database\ndocker-compose exec postgres psql -U ses_user -d ses_monitoring -c \"SELECT * FROM app_settings WHERE key LIKE 'aws_%';\"\n```\n\n### Performance Optimization\n\n1. **Database Optimization:**\n   - Configure retention policies to manage data size\n   - Monitor query performance with `EXPLAIN ANALYZE`\n   - Add custom indexes for specific query patterns\n   - Regular `VACUUM` and `ANALYZE` operations\n\n2. **Container Resources:**\n   - Adjust memory limits in docker-compose.yml\n   - Monitor container resource usage with `docker stats`\n   - Scale services horizontally if needed\n   - Use multi-stage builds to reduce image size\n\n3. **Application Performance:**\n   - Enable Go profiling for performance analysis\n   - Use connection pooling for database\n   - Implement caching for frequently accessed data\n   - Optimize React components with memoization\n\n## 🤝 Contributing\n\n1. Fork the repository\n2. Create a feature branch (`git checkout -b feature/amazing-feature`)\n3. Commit your changes (`git commit -m 'Add some amazing feature'`)\n4. Push to the branch (`git push origin feature/amazing-feature`)\n5. Open a Pull Request\n\n### Development Guidelines\n\n- **Backend**: Follow Go best practices and clean architecture\n- **Frontend**: Use TypeScript and functional components\n- **Database**: Use migrations for schema changes\n- **Testing**: Write tests for new features\n- **Documentation**: Update API documentation for changes\n- **Commits**: Follow conventional commit messages\n\n### Code Style\n\n- **Go**: Use `gofmt` and `golint`\n- **TypeScript**: Use ESLint and Prettier\n- **SQL**: Use consistent naming conventions\n- **Docker**: Multi-stage builds and minimal base images\n\n## 📄 License\n\nThis project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.\n\n## 🙏 Acknowledgments\n\n- **AWS SES** for email service integration\n- **PostgreSQL** for reliable data storage\n- **React** and **Go** communities for excellent frameworks\n- **Docker** for containerization platform\n- **Tailwind CSS** for utility-first styling\n- **Recharts** for beautiful data visualization\n\n## 📞 Support\n\nFor support and questions:\n\n1. Check the [Issues](../../issues) page\n2. Review the troubleshooting section\n3. Create a new issue with detailed information\n4. Include logs and system information\n\n---\n\n**Made with ❤️ by Wisnu**
+```
+
+### Building Docker Images
+
+> **Note:** This is handled automatically by `install.sh`. Manual build only needed for development.
+
+```bash
+# Build all services
+docker-compose build
+
+# Build specific service
+docker-compose build backend
+docker-compose build frontend
+```
+
+## 📊 API Documentation
+
+The API documentation is available via Swagger UI at:
+```
+http://localhost/swagger/index.html
+```
+
+### Key API Endpoints
+
+#### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/login` | User authentication |
+| `PUT` | `/api/change-password` | Change user password |
+
+#### Events & Metrics
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/events` | Get SES events with pagination |
+| `GET` | `/api/metrics` | Get dashboard metrics |
+| `GET` | `/api/metrics/daily` | Get daily analytics |
+| `GET` | `/api/metrics/monthly` | Get monthly analytics |
+| `GET` | `/api/metrics/hourly` | Get hourly analytics |
+
+#### Suppression Management
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/suppression` | Get suppression list |
+| `POST` | `/api/suppression` | Add single email to suppression |
+| `POST` | `/api/suppression/bulk` | **Bulk add** multiple emails |
+| `DELETE` | `/api/suppression/bulk` | **Bulk remove** multiple emails |
+| `DELETE` | `/api/suppression/:email` | Remove single email |
+| `GET` | `/api/suppression/:email/status` | Check email AWS status |
+| `POST` | `/api/suppression/sync` | Trigger AWS sync |
+| `GET` | `/api/suppression/sync/status` | Get sync status |
+
+#### Administration (Admin Only)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/users` | Get all users |
+| `POST` | `/api/users` | Create new user |
+| `PUT` | `/api/users/:id/reset-password` | Reset user password |
+| `PUT` | `/api/users/:id/disable` | Disable user account |
+| `DELETE` | `/api/users/:id` | Delete user account |
+| `GET` | `/api/settings/aws` | Get AWS settings |
+| `PUT` | `/api/settings/aws` | Update AWS settings |
+| `POST` | `/api/settings/aws/test` | Test AWS connection |
+| `GET` | `/api/settings/retention` | Get retention settings |
+| `PUT` | `/api/settings/retention` | Update retention settings |
+
+## 🛠️ Management Commands
+
+### Docker Compose Commands
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f backend
+docker-compose logs -f frontend
+
+# Stop all services
+docker-compose down
+
+# Restart specific service
+docker-compose restart backend
+
+# View service status
+docker-compose ps
+
+# Execute command in container
+docker-compose exec backend sh
+```
+
+### Database Management
+
+```bash
+# Connect to database
+docker-compose exec postgres psql -U ses_user -d ses_monitoring
+
+# Backup database
+docker-compose exec postgres pg_dump -U ses_user ses_monitoring > backup.sql
+
+# Restore database
+docker-compose exec -T postgres psql -U ses_user ses_monitoring < backup.sql
+
+# View database size
+docker-compose exec postgres psql -U ses_user -d ses_monitoring -c "\l+"
+```
+
+## 🔒 Security Considerations
+
+### Production Deployment
+
+1. **Change Default Credentials:**
+   - Update admin password after first login
+   - Use strong JWT secret key (change `JWT_SECRET` environment variable)
+
+2. **Environment Variables:**
+   - Store sensitive data in environment variables
+   - Use Docker secrets for production
+   - Never commit credentials to version control
+
+3. **Network Security:**
+   - Use HTTPS in production
+   - Configure firewall rules
+   - Limit database access to application only
+   - Use reverse proxy (nginx/traefik) for SSL termination
+
+4. **AWS Security:**
+   - Use IAM roles instead of access keys when possible
+   - Limit SES permissions to minimum required
+   - Enable AWS CloudTrail for audit logging
+   - Rotate AWS credentials regularly
+
+5. **Database Security:**
+   - Use strong database passwords
+   - Enable SSL connections
+   - Regular security updates
+   - Database connection pooling
+
+## 📈 Monitoring & Logging
+
+### Application Logs
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f backend
+docker-compose logs -f frontend
+docker-compose logs -f postgres
+
+# Follow logs with timestamps
+docker-compose logs -f -t
+```
+
+### Background Services
+
+The application runs two background services:
+
+1. **Cleanup Service**: Automatically removes old event logs based on retention settings
+2. **Sync Service**: Periodically syncs suppression list with AWS SES
+
+### Performance Monitoring
+
+Monitor application performance through:
+- Dashboard analytics page
+- Database query performance
+- Container resource usage
+- API response times
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+1. **Port Already in Use:**
+```bash
+# Check what's using the port
+lsof -i :80
+lsof -i :8080
+
+# Stop conflicting services
+sudo systemctl stop apache2
+sudo systemctl stop nginx
+```
+
+2. **Database Connection Issues:**
+```bash
+# Check database logs
+docker-compose logs postgres
+
+# Verify database is running
+docker-compose ps postgres
+
+# Test database connection
+docker-compose exec postgres psql -U ses_user -d ses_monitoring -c "SELECT 1;"
+```
+
+3. **Frontend Build Issues:**
+```bash
+# Clear npm cache
+npm cache clean --force
+
+# Rebuild frontend
+docker-compose build --no-cache frontend
+```
+
+4. **Backend API Issues:**
+```bash
+# Check backend logs
+docker-compose logs backend
+
+# Verify configuration
+docker-compose exec backend env | grep DB_
+
+# Test API endpoint
+curl http://localhost/health
+```
+
+5. **AWS Integration Issues:**
+```bash
+# Check AWS settings in database
+docker-compose exec postgres psql -U ses_user -d ses_monitoring -c "SELECT * FROM app_settings WHERE key LIKE 'aws_%';"
+```
+
+### Performance Optimization
+
+1. **Database Optimization:**
+   - Configure retention policies to manage data size
+   - Monitor query performance with `EXPLAIN ANALYZE`
+   - Add custom indexes for specific query patterns
+   - Regular `VACUUM` and `ANALYZE` operations
+
+2. **Container Resources:**
+   - Adjust memory limits in docker-compose.yml
+   - Monitor container resource usage with `docker stats`
+   - Scale services horizontally if needed
+   - Use multi-stage builds to reduce image size
+
+3. **Application Performance:**
+   - Enable Go profiling for performance analysis
+   - Use connection pooling for database
+   - Implement caching for frequently accessed data
+   - Optimize React components with memoization
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- **Backend**: Follow Go best practices and clean architecture
+- **Frontend**: Use TypeScript and functional components
+- **Database**: Use migrations for schema changes
+- **Testing**: Write tests for new features
+- **Documentation**: Update API documentation for changes
+- **Commits**: Follow conventional commit messages
+
+### Code Style
+
+- **Go**: Use `gofmt` and `golint`
+- **TypeScript**: Use ESLint and Prettier
+- **SQL**: Use consistent naming conventions
+- **Docker**: Multi-stage builds and minimal base images
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **AWS SES** for email service integration
+- **PostgreSQL** for reliable data storage
+- **React** and **Go** communities for excellent frameworks
+- **Docker** for containerization platform
+- **Tailwind CSS** for utility-first styling
+- **Recharts** for beautiful data visualization
+
+## 📞 Support
+
+For support and questions:
+
+1. Check the [Issues](../../issues) page
+2. Review the troubleshooting section
+3. Create a new issue with detailed information
+4. Include logs and system information
+
+---
+
+**Made with ❤️ by Wisnu**
