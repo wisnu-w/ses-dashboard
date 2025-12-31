@@ -11,16 +11,11 @@ services:
       POSTGRES_PASSWORD: ses_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     networks:
       - ses-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ses_user -d ses_monitoring"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    restart: unless-stopped
 
   # Backend API
   backend:
@@ -39,12 +34,9 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     networks:
       - ses-network
-    volumes:
-      - ./ses-dashboard-monitoring/config:/app/config
     restart: unless-stopped
 
   # Frontend
@@ -53,6 +45,8 @@ services:
       context: ./ses-dashboard-frontend
       dockerfile: Dockerfile
     container_name: ses-monitoring-frontend
+    environment:
+      - BACKEND_URL=http://backend:8080
     ports:
       - "80:80"
     depends_on:

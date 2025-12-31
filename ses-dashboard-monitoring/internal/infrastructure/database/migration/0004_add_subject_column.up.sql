@@ -1,0 +1,1 @@
+ALTER TABLE ses_events ADD COLUMN subject TEXT DEFAULT '';

@@ -83,6 +83,7 @@ func main() {
 	userHandler := http.NewUserHandler(authUC)
 	settingsHandler := http.NewSettingsHandler(settingsRepo)
 	suppressionHandler := http.NewSuppressionHandler(settingsRepo, suppressionRepo, suppressionDBRepo, syncService)
+	healthHandler := http.NewHealthHandler()
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -112,6 +113,8 @@ func main() {
 	// ========================
 	// PUBLIC ROUTES
 	// ========================
+	r.GET("/health", healthHandler.Health)
+	r.GET("/ready", healthHandler.Ready)
 	r.POST("/sns/ses", snsHandler.Handle)
 	r.POST("/api/login", authHandler.Login)
 

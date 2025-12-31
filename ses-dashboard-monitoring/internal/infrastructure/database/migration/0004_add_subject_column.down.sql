@@ -1,0 +1,1 @@
+ALTER TABLE ses_events DROP COLUMN subject;
