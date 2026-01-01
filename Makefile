@@ -13,6 +13,7 @@ BINARY_NAME=ses-monitoring
 BINARY_UNIX=$(BINARY_NAME)_unix
 
 # Database parameters
+BACKEND_DIR=ses-dashboard-monitoring
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=ses_user
@@ -22,11 +23,11 @@ DB_URL=postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?ssl
 
 # Build the application
 build:
-	$(GOBUILD) -o $(BINARY_NAME) -v ./ses-dashboard-monitoring/cmd/api
+	cd $(BACKEND_DIR) && $(GOBUILD) -o $(BINARY_NAME) -v ./cmd/api
 
 # Run the application
 run:
-	$(GOBUILD) -o $(BINARY_NAME) -v ./ses-dashboard-monitoring/cmd/api
+	cd $(BACKEND_DIR) && $(GOBUILD) -o $(BINARY_NAME) -v ./cmd/api
 	./$(BINARY_NAME)
 
 # Run tests
@@ -46,11 +47,11 @@ deps:
 
 # Generate swagger documentation
 swagger:
-	swag init -g ses-dashboard-monitoring/cmd/api/main.go -o docs
+	cd $(BACKEND_DIR) && swag init -g ./cmd/api/main.go -o docs
 
 # Build for Linux
 build-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v ./ses-dashboard-monitoring/cmd/api
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 cd $(BACKEND_DIR) && $(GOBUILD) -o $(BINARY_UNIX) -v ./cmd/api
 
 # Docker build
 docker-build:
@@ -81,16 +82,15 @@ check: fmt lint test
 
 # Install migrate tool
 install-migrate:
-	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/ses-dashboard-monitoring/cmd/migrate@latest
+	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # Run migrations up
 migrate-up:
-	go run ses-dashboard-monitoring/cmd/migrate/main.go -action=up -host=$(DB_HOST) -port=$(DB_PORT) -user=$(DB_USER) -password=$(DB_PASSWORD) -dbname=$(DB_NAME)
+	cd $(BACKEND_DIR) && go run ./cmd/migrate/main.go -action=up -host=$(DB_HOST) -port=$(DB_PORT) -user=$(DB_USER) -password=$(DB_PASSWORD) -dbname=$(DB_NAME)
 
 # Run migrations down
 migrate-down:
-	go run ses-dashboard-monitoring/cmd/migrate/main.go -action=down -host=$(DB_HOST) -port=$(DB_PORT) -user=$(DB_USER) -password=$(DB_PASSWORD) -dbname=$(DB_NAME)
-
+	cd $(BACKEND_DIR) && go run ./cmd/migrate/main.go -action=down -host=$(DB_HOST) -port=$(DB_PORT) -user=$(DB_USER) -password=$(DB_PASSWORD) -dbname=$(DB_NAME)
 # Create new migration
 migrate-create:
 	@read -p "Enter migration name: " name; \
