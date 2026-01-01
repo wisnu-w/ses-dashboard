@@ -33,6 +33,16 @@ print_error() {
 CONTAINER_RUNTIME=""
 COMPOSE_CMD=""
 
+check_makefile() {
+    print_status "Checking Makefile..."
+    
+    if command -v make &> /dev/null; then
+        print_error "Makefile not found in ses-dashboard-monitoring directory."
+        exit 1
+    fi
+    
+    print_success "Makefile is installed"
+}
 # Check if Docker or Podman is installed
 check_container_runtime() {
     print_status "Checking container runtime..."
@@ -111,9 +121,7 @@ run_migrations() {
     sleep 5
     
     # Run migrations inside backend container
-    $COMPOSE_CMD exec -T backend sh -c "
-        cd /app && make migrate-up
-    " || print_warning "Migrations may have already been applied"
+    make migrate-up || print_warning "Migrations may have already been applied"
     
     print_success "Database migrations completed"
 }
@@ -175,9 +183,10 @@ show_status() {
 main() {
     echo ""
     print_status "Starting installation process..."
-    
+    check_makefile
     check_container_runtime
     check_compose
+    
     create_directories
     start_services
     wait_for_services

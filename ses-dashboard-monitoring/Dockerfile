@@ -1,27 +1,29 @@
 # Build stage
-FROM golang:1.25-alpine AS builder
+FROM docker.io/library/golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -a -installsuffix cgo -o main ./cmd/api
+
 
 # Final stage
-FROM alpine:latest
+FROM docker.io/library/alpine:3.20
 
 RUN apk --no-cache add ca-certificates tzdata
-WORKDIR /root/
 
-# Copy the binary from builder stage
-COPY --from=builder /app/main .
+WORKDIR /app
+
+COPY --from=builder /app/main ./main
 COPY --from=builder /app/config ./config
+
+# 🔥 INI YANG HILANG
+RUN chmod +x /app/main
 
 # Create non-root user
 RUN adduser -D -s /bin/sh appuser

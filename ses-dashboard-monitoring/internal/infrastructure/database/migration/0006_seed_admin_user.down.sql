@@ -1,1 +1,2 @@
-DELETE FROM users WHERE username = 'admin';
+-- This down migration is now redundant
+-- Keeping for migration history consistency

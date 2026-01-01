@@ -1,1 +1,2 @@
-ALTER TABLE users DROP COLUMN role;
+-- Remove admin user
+DELETE FROM users WHERE username = 'admin';

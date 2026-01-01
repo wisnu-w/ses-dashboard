@@ -1,6 +1,2 @@
--- +migrate Up
-
--- +migrate Down
-DROP INDEX IF EXISTS idx_ses_events_event_timestamp;
-DROP INDEX IF EXISTS idx_ses_events_event_type;
-DROP INDEX IF EXISTS idx_ses_events_email;
+DROP INDEX IF EXISTS idx_ses_events_created_at;
+DROP INDEX IF EXISTS idx_ses_events_message_id;

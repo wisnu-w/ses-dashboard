@@ -1,1 +1,2 @@
-ALTER TABLE users ADD COLUMN active BOOLEAN DEFAULT true;
+-- This migration is now redundant as active column is in initial table creation
+-- Keeping for migration history consistency

@@ -2,8 +2,9 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(50) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL
+  email VARCHAR(255) UNIQUE NOT NULL,
+  role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
-
--- Insert default user
-INSERT INTO users (username, password, email) VALUES ('admin', 'password', 'admin@example.com') ON CONFLICT (username) DO NOTHING;

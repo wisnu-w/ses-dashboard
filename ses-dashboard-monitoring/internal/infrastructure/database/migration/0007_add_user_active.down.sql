@@ -1,1 +1,2 @@
-ALTER TABLE users DROP COLUMN active;
+-- This down migration is now redundant
+-- Keeping for migration history consistency

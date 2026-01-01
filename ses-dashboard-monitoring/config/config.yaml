@@ -7,9 +7,9 @@ app:
   enable_swagger: true
 
 database:
-  host: localhost
+  host: postgres
   port: 5432
-  name: ses_dashboard
+  name: ses_monitoring
   user: ses_user
   password: password123!
   sslmode: disable
