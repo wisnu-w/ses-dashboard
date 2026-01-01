@@ -92,14 +92,6 @@ fi
 
 }
 
-# Create necessary directories
-create_directories() {
-    print_status "Creating necessary directories..."
-    mkdir -p logs
-    mkdir -p data/postgres
-    print_success "Directories created"
-}
-
 # Build and start services
 start_services() {
     print_status "Building and starting services..."
@@ -186,8 +178,6 @@ main() {
     check_makefile
     check_container_runtime
     check_compose
-    
-    create_directories
     start_services
     wait_for_services
     run_migrations
