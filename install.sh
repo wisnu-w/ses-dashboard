@@ -29,24 +29,57 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if Docker is installed
-check_docker() {
-    print_status "Checking Docker installation..."
-    if ! command -v docker &> /dev/null; then
-        print_error "Docker is not installed. Please install Docker first."
+# Global variables for container runtime
+CONTAINER_RUNTIME=""
+COMPOSE_CMD=""
+
+# Check if Docker or Podman is installed
+check_container_runtime() {
+    print_status "Checking container runtime..."
+    
+    if command -v docker &> /dev/null; then
+        CONTAINER_RUNTIME="docker"
+        print_success "Docker is installed"
+    elif command -v podman &> /dev/null; then
+        CONTAINER_RUNTIME="podman"
+        print_success "Podman is installed"
+    else
+        print_error "Neither Docker nor Podman is installed. Please install one of them first."
         exit 1
     fi
-    print_success "Docker is installed"
 }
 
-# Check if Docker Compose is installed
-check_docker_compose() {
-    print_status "Checking Docker Compose installation..."
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        print_error "Docker Compose is not installed. Please install Docker Compose first."
+# Check if Docker Compose or Podman Compose is installed
+check_compose() {
+    print_status "Checking compose installation..."
+    
+    if [ "$CONTAINER_RUNTIME" = "docker" ]; then
+        if command -v docker-compose &> /dev/null; then
+            COMPOSE_CMD="docker-compose"
+            print_success "Docker Compose is installed"
+        elif docker compose version &> /dev/null 2>&1; then
+            COMPOSE_CMD="docker compose"
+            print_success "Docker Compose (plugin) is installed"
+        else
+            print_error "Docker Compose is not installed. Please install Docker Compose first."
+            exit 1
+        fi
+    elif [ "$CONTAINER_RUNTIME" = "podman" ]; then
+    if command -v docker-compose >/dev/null 2>&1; then
+        COMPOSE_CMD="docker-compose"
+        print_success "Using docker-compose with Podman"
+    elif docker compose version >/dev/null 2>&1; then
+        COMPOSE_CMD="docker compose"
+        print_success "Using docker compose with Podman"
+    elif command -v podman-compose >/dev/null 2>&1; then
+        COMPOSE_CMD="podman-compose"
+        print_success "Using podman-compose"
+    else
+        print_error "No Compose provider found for Podman"
         exit 1
     fi
-    print_success "Docker Compose is installed"
+fi
+
 }
 
 # Create necessary directories
@@ -62,10 +95,10 @@ start_services() {
     print_status "Building and starting services..."
     
     # Stop existing containers
-    docker-compose down 2>/dev/null || true
+    $COMPOSE_CMD down 2>/dev/null || true
     
     # Build and start services
-    docker-compose up --build -d
+    $COMPOSE_CMD up --build -d
     
     print_success "Services started successfully"
 }
@@ -78,7 +111,7 @@ run_migrations() {
     sleep 5
     
     # Run migrations inside backend container
-    docker-compose exec -T backend sh -c "
+    $COMPOSE_CMD exec -T backend sh -c "
         cd /app && make migrate-up
     " || print_warning "Migrations may have already been applied"
     
@@ -117,7 +150,7 @@ wait_for_services() {
 # Show service status
 show_status() {
     print_status "Service Status:"
-    docker-compose ps
+    $COMPOSE_CMD ps
     
     echo ""
     print_success "🎉 Installation completed successfully!"
@@ -132,9 +165,9 @@ show_status() {
     echo "   • Password: admin123"
     echo ""
     echo "📚 Useful Commands:"
-    echo "   • View logs:     docker-compose logs -f"
-    echo "   • Stop services: docker-compose down"
-    echo "   • Restart:       docker-compose restart"
+    echo "   • View logs:     $COMPOSE_CMD logs -f"
+    echo "   • Stop services: $COMPOSE_CMD down"
+    echo "   • Restart:       $COMPOSE_CMD restart"
     echo ""
 }
 
@@ -143,8 +176,8 @@ main() {
     echo ""
     print_status "Starting installation process..."
     
-    check_docker
-    check_docker_compose
+    check_container_runtime
+    check_compose
     create_directories
     start_services
     wait_for_services
