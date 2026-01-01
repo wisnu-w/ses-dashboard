@@ -36,7 +36,7 @@ COMPOSE_CMD=""
 check_makefile() {
     print_status "Checking Makefile..."
     
-    if command -v make &> /dev/null; then
+    if ! command -v make &> /dev/null; then
         print_error "Makefile not found in ses-dashboard-monitoring directory."
         exit 1
     fi
