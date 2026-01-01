@@ -33,15 +33,38 @@ print_error() {
 CONTAINER_RUNTIME=""
 COMPOSE_CMD=""
 
+# Check if Go is installed and meets minimum version requirement
+check_go() {
+    print_status "Checking Go installation..."
+    
+    if ! command -v go &> /dev/null; then
+        print_error "Go is not installed. Please install Go 1.25 or later."
+        exit 1
+    fi
+    
+    # Get Go version and extract version number
+    GO_VERSION=$(go version | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
+    MAJOR=$(echo $GO_VERSION | cut -d. -f1)
+    MINOR=$(echo $GO_VERSION | cut -d. -f2)
+    
+    # Check if version is at least 1.25
+    if [ "$MAJOR" -lt 1 ] || ([ "$MAJOR" -eq 1 ] && [ "$MINOR" -lt 25 ]); then
+        print_error "Go version $GO_VERSION is installed, but Go 1.25 or later is required."
+        exit 1
+    fi
+    
+    print_success "Go $GO_VERSION is installed"
+}
+
 check_makefile() {
     print_status "Checking Makefile..."
     
     if ! command -v make &> /dev/null; then
-        print_error "Makefile not found in ses-dashboard-monitoring directory."
+        print_error "Make is not installed. Please install make."
         exit 1
     fi
     
-    print_success "Makefile is installed"
+    print_success "Make is installed"
 }
 # Check if Docker or Podman is installed
 check_container_runtime() {
@@ -175,6 +198,7 @@ show_status() {
 main() {
     echo ""
     print_status "Starting installation process..."
+    check_go
     check_makefile
     check_container_runtime
     check_compose
