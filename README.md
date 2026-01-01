@@ -44,8 +44,10 @@ A comprehensive monitoring dashboard for AWS SES (Simple Email Service) events w
 
 ## 📋 Prerequisites
 
-- **Docker** (version 20.10+)
-- **Docker Compose** (version 2.0+)
+- **Docker** (version 20.10+) or **Podman** (version 4.0+)
+- **Docker Compose** (version 2.0+) or **Podman Compose**
+- **Go** (version 1.25+ for local development)
+- **Make** (for running build commands)
 - **Git**
 - **Curl** (for health checks)
 
