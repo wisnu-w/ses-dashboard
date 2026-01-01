@@ -4,14 +4,16 @@ services:
   postgres:
     image: docker.io/library/postgres:18-alpine
     container_name: ses-monitoring-db
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: ses_monitoring
-      POSTGRES_USER: ses_user
-      POSTGRES_PASSWORD: password123!
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     networks:
       - ses-network
     restart: unless-stopped
@@ -22,16 +24,18 @@ services:
       context: ./ses-dashboard-monitoring
       dockerfile: Dockerfile
     container_name: ses-monitoring-api
+    env_file:
+      - .env
     environment:
       - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=ses_user
-      - DB_PASSWORD=password123!
-      - DB_NAME=ses_monitoring
-      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-      - PORT=8080
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=${APP_PORT}
     ports:
-      - "8080:8080"
+      - "${APP_PORT}:${APP_PORT}"
     depends_on:
       - postgres
     networks:
@@ -44,8 +48,10 @@ services:
       context: ./ses-dashboard-frontend
       dockerfile: Dockerfile
     container_name: ses-monitoring-frontend
+    env_file:
+      - .env
     environment:
-      - BACKEND_URL=http://backend:8080
+      - BACKEND_URL=${BACKEND_URL}
     ports:
       - "80:80"
     depends_on:

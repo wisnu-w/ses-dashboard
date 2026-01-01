@@ -66,6 +66,7 @@ check_makefile() {
     
     print_success "Make is installed"
 }
+
 # Check if Docker or Podman is installed
 check_container_runtime() {
     print_status "Checking container runtime..."
@@ -189,7 +190,7 @@ show_status() {
     echo ""
     echo "🔐 Default Admin Credentials:"
     echo "   • Username: admin"
-    echo "   • Password: admin123"
+    echo "   • Password: password"
     echo ""
     echo "📚 Useful Commands:"
     echo "   • View logs:     $COMPOSE_CMD logs -f"

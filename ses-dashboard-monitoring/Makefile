@@ -1,6 +1,10 @@
 # SES Dashboard Monitoring - Backend Makefile
 
-.PHONY: build run test clean docker-build docker-run swagger deps migrate-up migrate-down migrate-create
+.PHONY: build run test clean docker-build docker-run swagger deps migrate-up migrate-down migrate-create load-env
+
+# Load environment variables from root .env file (generated from config.yaml)
+include ../.env
+export
 
 # Go parameters
 GOCMD=go
@@ -12,13 +16,8 @@ GOMOD=$(GOCMD) mod
 BINARY_NAME=ses-monitoring
 BINARY_UNIX=$(BINARY_NAME)_unix
 
-# Database parameters
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=ses_user
-DB_PASSWORD=password123!
-DB_NAME=ses_monitoring
-DB_URL=postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+# Database URL for migrations
+DB_URL=postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
 
 # Build the application
 build:
@@ -82,6 +81,10 @@ check: fmt lint test
 # Install migrate tool
 install-migrate:
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+# Generate .env from config.yaml
+generate-env:
+	../generate-env.sh
 
 # Run migrations up
 migrate-up:

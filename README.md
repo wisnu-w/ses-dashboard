@@ -81,8 +81,10 @@ The installation script will:
 ### 4. Default Credentials
 ```
 Username: admin
-Password: admin123
+Password: password
 ```
+
+**⚠️ IMPORTANT: Change the default password after first login for security!**
 
 **That's it!** The `install.sh` script handles everything - from building Docker images to database migrations. No manual steps required.
 

@@ -3,16 +3,18 @@ app:
   env: local
   port: 8080
   log_body: true
-  jwt_secret: your-secret-key-here
+  jwt_secret: your-super-secret-jwt-key-change-this-in-production
   enable_swagger: true
 
 database:
-  host: postgres
+  host: localhost
   port: 5432
-  name: ses_monitoring
+  name: ses_dashboard
   user: ses_user
   password: password123!
   sslmode: disable
 
 aws:
   region: ap-southeast-1
+  access_key: ""
+  secret_key: ""

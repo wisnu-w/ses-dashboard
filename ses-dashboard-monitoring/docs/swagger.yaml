@@ -1,5 +1,56 @@
 basePath: /
 definitions:
+  aws.SuppressionStatus:
+    properties:
+      email:
+        type: string
+      last_update:
+        type: string
+      reason:
+        type: string
+      suppressed:
+        type: boolean
+    type: object
+  http.AddSuppressionRequest:
+    properties:
+      email:
+        type: string
+      reason:
+        type: string
+    required:
+    - email
+    type: object
+  http.BulkRemoveRequest:
+    properties:
+      emails:
+        items:
+          type: string
+        type: array
+    required:
+    - emails
+    type: object
+  http.BulkSuppressionRequest:
+    properties:
+      emails:
+        items:
+          type: string
+        type: array
+      reason:
+        type: string
+    required:
+    - emails
+    type: object
+  http.HealthResponse:
+    properties:
+      service:
+        type: string
+      status:
+        type: string
+      timestamp:
+        type: string
+      version:
+        type: string
+    type: object
   http.MetricsResponse:
     properties:
       bounce_count:
@@ -19,6 +70,14 @@ definitions:
       send_count:
         type: integer
       total_events:
+        type: integer
+    type: object
+  http.RetentionSettings:
+    properties:
+      enabled:
+        type: boolean
+      retention_days:
+        description: 0 = never delete
         type: integer
     type: object
   sesevent.DailyMetrics:
@@ -43,48 +102,6 @@ definitions:
         type: integer
       total_events:
         type: integer
-    type: object
-  sesevent.Event:
-    properties:
-      bounceSubType:
-        type: string
-      bounceType:
-        type: string
-      createdAt:
-        type: string
-      diagnosticCode:
-        type: string
-      email:
-        type: string
-      eventTimestamp:
-        type: string
-      eventType:
-        type: string
-      id:
-        format: int64
-        type: integer
-      messageID:
-        type: string
-      processingTimeMillis:
-        type: integer
-      reason:
-        type: string
-      recipients:
-        description: JSON array
-        type: string
-      remoteMtaIp:
-        type: string
-      reportingMTA:
-        type: string
-      smtpResponse:
-        type: string
-      source:
-        type: string
-      status:
-        type: string
-      tags:
-        description: JSON map
-        type: string
     type: object
   sesevent.HourlyMetrics:
     properties:
@@ -132,6 +149,17 @@ definitions:
       total_events:
         type: integer
     type: object
+  settings.AWSConfig:
+    properties:
+      access_key:
+        type: string
+      enabled:
+        type: boolean
+      region:
+        type: string
+      secret_key:
+        type: string
+    type: object
   usecase.LoginRequest:
     properties:
       password:
@@ -148,10 +176,14 @@ definitions:
     type: object
   user.User:
     properties:
+      active:
+        type: boolean
       email:
         type: string
       id:
         type: integer
+      role:
+        type: string
       username:
         type: string
     type: object
@@ -171,17 +203,32 @@ info:
 paths:
   /api/events:
     get:
-      description: Retrieve list of SES events
+      description: Retrieve list of SES events with pagination support
+      parameters:
+      - description: 'Page number (default: 1)'
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: 'Number of events per page (default: 50, max: 1000)'
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
             additionalProperties:
-              items:
-                $ref: '#/definitions/sesevent.Event'
-              type: array
+              type: string
             type: object
         "500":
           description: Internal Server Error
@@ -191,7 +238,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Get SES events
+      summary: Get SES events with pagination
       tags:
       - monitoring
   /api/login:
@@ -324,6 +371,382 @@ paths:
       summary: Get monthly metrics
       tags:
       - monitoring
+  /api/settings/aws:
+    get:
+      description: Get current AWS configuration settings
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/settings.AWSConfig'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get AWS settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: Update AWS configuration settings
+      parameters:
+      - description: AWS settings
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/settings.AWSConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update AWS settings
+      tags:
+      - settings
+  /api/settings/aws/test:
+    post:
+      consumes:
+      - application/json
+      description: Test AWS SES connection with provided credentials
+      parameters:
+      - description: AWS settings to test
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/settings.AWSConfig'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Test AWS connection
+      tags:
+      - settings
+  /api/settings/retention:
+    get:
+      description: Get event log retention settings
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.RetentionSettings'
+      security:
+      - BearerAuth: []
+      summary: Get retention settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: Update event log retention settings
+      parameters:
+      - description: Retention settings
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/http.RetentionSettings'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update retention settings
+      tags:
+      - settings
+  /api/suppression:
+    get:
+      description: Get list of suppressed emails from suppressions table
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get suppressions from new table
+      tags:
+      - suppression
+    post:
+      consumes:
+      - application/json
+      description: Add email to local suppression list and sync to AWS SES
+      parameters:
+      - description: Email to suppress
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.AddSuppressionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add email to suppression list with AWS sync
+      tags:
+      - suppression
+  /api/suppression/{email}:
+    delete:
+      description: Remove email from AWS SES suppression list
+      parameters:
+      - description: Email address
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove email from AWS SES suppression list
+      tags:
+      - suppression
+  /api/suppression/{email}/status:
+    get:
+      description: Check if email is suppressed in AWS SES
+      parameters:
+      - description: Email address
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/aws.SuppressionStatus'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check email suppression status
+      tags:
+      - suppression
+  /api/suppression/bulk:
+    delete:
+      consumes:
+      - application/json
+      description: Remove multiple emails from AWS SES suppression list at once
+      parameters:
+      - description: Emails to remove from suppression
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.BulkRemoveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bulk remove emails from suppression list
+      tags:
+      - suppression
+    post:
+      consumes:
+      - application/json
+      description: Add multiple emails to suppression list at once
+      parameters:
+      - description: Emails to suppress
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.BulkSuppressionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Bulk add emails to suppression list
+      tags:
+      - suppression
+  /api/suppression/sync:
+    post:
+      description: Trigger manual sync of suppression list from AWS SES to local database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Trigger manual sync from AWS SES
+      tags:
+      - suppression
+  /api/suppression/sync/status:
+    get:
+      description: Get last sync time and current sync status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get sync status
+      tags:
+      - suppression
+  /health:
+    get:
+      description: Check if the service is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.HealthResponse'
+      summary: Health check endpoint
+      tags:
+      - health
+  /ready:
+    get:
+      description: Check if the service is ready to serve requests
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.HealthResponse'
+      summary: Readiness check endpoint
+      tags:
+      - health
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.
