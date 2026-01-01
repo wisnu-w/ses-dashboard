@@ -136,25 +136,6 @@ run_migrations() {
     print_status "Waiting for database to be ready..."
     sleep 15
     
-    # Test database connection first
-    print_status "Testing database connection..."
-    for i in {1..10}; do
-        if [ "$CONTAINER_RUNTIME" = "docker" ]; then
-            if $COMPOSE_CMD exec -T ses-monitoring-db pg_isready -h localhost -p 5432 -U ses_user > /dev/null 2>&1; then
-                print_success "Database is ready"
-                break
-            fi
-        else
-            # For Podman, use exec without -T flag
-            if $COMPOSE_CMD exec ses-monitoring-db pg_isready -h localhost -p 5432 -U ses_user > /dev/null 2>&1; then
-                print_success "Database is ready"
-                break
-            fi
-        fi
-        print_status "Database not ready, waiting... ($i/10)"
-        sleep 3
-    done
-    
     # Change to backend directory and run migrations from host
 
     
