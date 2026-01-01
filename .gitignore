@@ -1,1 +1,99 @@
-# Environment files\n.env\n.env.local\n.env.production\n\n# Database\n*.sql.backup\ndata/\nlogs/\n\n# Docker\n.docker/\n\n# IDE\n.vscode/\n.idea/\n*.swp\n*.swo\n\n# OS\n.DS_Store\nThumbs.db\n\n# Temporary files\n*.tmp\n*.temp\n\n# Backup files\n*.backup\n*.bak\n\n# Build artifacts\ndist/\nbuild/\n\n# Dependencies\nnode_modules/\nvendor/\n\n# Go specific\n*.exe\n*.exe~\n*.dll\n*.so\n*.dylib\nmain\n\n# Test coverage\n*.out\ncoverage/\n\n# Logs\n*.log\nnpm-debug.log*\nyarn-debug.log*\nyarn-error.log*
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+
+# Database
+*.sql.backup
+data/
+logs/
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.backup
+*.bak
+
+# Build artifacts
+dist/
+build/
+target/
+bin/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+main
+*.test
+
+# Test coverage
+*.out
+coverage/
+*.cover
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# AWS credentials (security)
+.aws/
+credentials
+config
+*.pem
+*.key
+
+# Application specific
+config/local.yaml
+config/production.yaml
+config/development.yaml
+
+# Frontend specific
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Package manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Runtime
+pids
+*.pid
+*.seed
+*.pid.lock
