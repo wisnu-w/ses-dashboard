@@ -26,7 +26,7 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=ses_user
-      - DB_PASSWORD=ses_password
+      - DB_PASSWORD=password123!
       - DB_NAME=ses_monitoring
       - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
       - PORT=8080
