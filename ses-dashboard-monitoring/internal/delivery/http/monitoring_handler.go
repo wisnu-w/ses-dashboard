@@ -17,7 +17,7 @@ import (
 type MonitoringHandler struct {
 	uc           *usecase.SESUsecase
 	settingsRepo settings.Repository
-	
+
 	// Timezone cache
 	timezoneMu    sync.RWMutex
 	timezoneCache string
@@ -25,8 +25,8 @@ type MonitoringHandler struct {
 
 func NewMonitoringHandler(uc *usecase.SESUsecase, settingsRepo settings.Repository) *MonitoringHandler {
 	h := &MonitoringHandler{
-		uc:           uc,
-		settingsRepo: settingsRepo,
+		uc:            uc,
+		settingsRepo:  settingsRepo,
 		timezoneCache: "Asia/Jakarta", // default
 	}
 	h.loadTimezone() // Load initial timezone
@@ -52,25 +52,25 @@ func (h *MonitoringHandler) GetEvents(c *gin.Context) {
 	search := c.Query("search")
 	startDate := c.Query("start_date")
 	endDate := c.Query("end_date")
-	
+
 	if p := c.Query("page"); p != "" {
 		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
 			page = parsed
 		}
 	}
-	
+
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 1000 {
 			limit = parsed
 		}
 	}
-	
+
 	offset := (page - 1) * limit
-	
+
 	var events []*sesevent.Event
 	var total int
 	var err error
-	
+
 	// Use optimized queries based on filter presence
 	if search != "" || startDate != "" || endDate != "" {
 		events, err = h.uc.GetEventsWithFilter(c.Request.Context(), limit, offset, search, startDate, endDate)
@@ -89,14 +89,14 @@ func (h *MonitoringHandler) GetEvents(c *gin.Context) {
 		// Get total count
 		total, err = h.uc.GetEventCount(c.Request.Context())
 	}
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	totalPages := (total + limit - 1) / limit // Ceiling division
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"events": events,
 		"pagination": gin.H{
@@ -186,13 +186,13 @@ func (h *MonitoringHandler) GetDailyMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Convert timestamps to configured timezone
 	if err := h.convertMetricsTimezone(metrics); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"daily_metrics": metrics})
 }
 
@@ -211,13 +211,13 @@ func (h *MonitoringHandler) GetMonthlyMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Convert timestamps to configured timezone
 	if err := h.convertMetricsTimezone(metrics); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"monthly_metrics": metrics})
 }
 
@@ -236,24 +236,24 @@ func (h *MonitoringHandler) GetHourlyMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Convert timestamps to configured timezone
 	if err := h.convertMetricsTimezone(metrics); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"hourly_metrics": metrics})
 }
 
 func (h *MonitoringHandler) convertMetricsTimezone(metrics interface{}) error {
 	timezone := h.getTimezoneFromCache()
-	
+
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return err
 	}
-	
+
 	switch m := metrics.(type) {
 	case []sesevent.DailyMetrics:
 		for i := range m {
@@ -269,12 +269,12 @@ func (h *MonitoringHandler) convertMetricsTimezone(metrics interface{}) error {
 		}
 	case []sesevent.HourlyMetrics:
 		for i := range m {
-			if t, err := time.Parse("2006-01-02 15:04:05", m[i].Hour); err == nil {
-				m[i].Hour = t.In(loc).Format("2006-01-02 15:04:05")
+			if t, err := time.Parse("2006-01-02 15:04", m[i].Hour); err == nil {
+				m[i].Hour = t.In(loc).Format("2006-01-02 15:04")
 			}
 		}
 	}
-	
+
 	return nil
 }
 
