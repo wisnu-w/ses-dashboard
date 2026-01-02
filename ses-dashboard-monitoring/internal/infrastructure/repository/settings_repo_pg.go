@@ -41,6 +41,7 @@ func (r *settingsRepo) Set(ctx context.Context, key, value string, updatedBy int
 		"aws_secret_key":    "AWS secret key for SES authentication",
 		"retention_days":    "Number of days to retain event logs (0 = never delete)",
 		"retention_enabled": "Enable/disable automatic log retention cleanup",
+		"timezone":          "Application timezone for date/time display",
 	}
 
 	description := descriptions[key]
@@ -107,4 +108,16 @@ func (r *settingsRepo) TestAWSConnection(ctx context.Context, config *settings.A
 		return fmt.Errorf("AWS credentials are required")
 	}
 	return nil
+}
+
+func (r *settingsRepo) GetTimezoneConfig(ctx context.Context) (*settings.TimezoneConfig, error) {
+	config := &settings.TimezoneConfig{
+		Timezone: "Asia/Jakarta", // default
+	}
+
+	if timezone, err := r.Get(ctx, "timezone"); err == nil {
+		config.Timezone = timezone.Value
+	}
+
+	return config, nil
 }

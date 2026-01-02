@@ -1,21 +1,36 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 
 	"ses-monitoring/internal/domain/sesevent"
+	"ses-monitoring/internal/domain/settings"
 	"ses-monitoring/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 type MonitoringHandler struct {
-	uc *usecase.SESUsecase
+	uc           *usecase.SESUsecase
+	settingsRepo settings.Repository
+	
+	// Timezone cache
+	timezoneMu    sync.RWMutex
+	timezoneCache string
 }
 
-func NewMonitoringHandler(uc *usecase.SESUsecase) *MonitoringHandler {
-	return &MonitoringHandler{uc: uc}
+func NewMonitoringHandler(uc *usecase.SESUsecase, settingsRepo settings.Repository) *MonitoringHandler {
+	h := &MonitoringHandler{
+		uc:           uc,
+		settingsRepo: settingsRepo,
+		timezoneCache: "Asia/Jakarta", // default
+	}
+	h.loadTimezone() // Load initial timezone
+	return h
 }
 
 // GetEvents godoc
@@ -171,6 +186,13 @@ func (h *MonitoringHandler) GetDailyMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	
+	// Convert timestamps to configured timezone
+	if err := h.convertMetricsTimezone(metrics); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
 	c.JSON(http.StatusOK, gin.H{"daily_metrics": metrics})
 }
 
@@ -189,6 +211,13 @@ func (h *MonitoringHandler) GetMonthlyMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	
+	// Convert timestamps to configured timezone
+	if err := h.convertMetricsTimezone(metrics); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
 	c.JSON(http.StatusOK, gin.H{"monthly_metrics": metrics})
 }
 
@@ -207,5 +236,63 @@ func (h *MonitoringHandler) GetHourlyMetrics(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	
+	// Convert timestamps to configured timezone
+	if err := h.convertMetricsTimezone(metrics); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
 	c.JSON(http.StatusOK, gin.H{"hourly_metrics": metrics})
+}
+
+func (h *MonitoringHandler) convertMetricsTimezone(metrics interface{}) error {
+	timezone := h.getTimezoneFromCache()
+	
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return err
+	}
+	
+	switch m := metrics.(type) {
+	case []sesevent.DailyMetrics:
+		for i := range m {
+			if t, err := time.Parse("2006-01-02", m[i].Date); err == nil {
+				m[i].Date = t.In(loc).Format("2006-01-02")
+			}
+		}
+	case []sesevent.MonthlyMetrics:
+		for i := range m {
+			if t, err := time.Parse("2006-01", m[i].Month); err == nil {
+				m[i].Month = t.In(loc).Format("2006-01")
+			}
+		}
+	case []sesevent.HourlyMetrics:
+		for i := range m {
+			if t, err := time.Parse("2006-01-02 15:04:05", m[i].Hour); err == nil {
+				m[i].Hour = t.In(loc).Format("2006-01-02 15:04:05")
+			}
+		}
+	}
+	
+	return nil
+}
+
+func (h *MonitoringHandler) getTimezoneFromCache() string {
+	h.timezoneMu.RLock()
+	timezone := h.timezoneCache
+	h.timezoneMu.RUnlock()
+	return timezone
+}
+
+func (h *MonitoringHandler) loadTimezone() {
+	if config, err := h.settingsRepo.GetTimezoneConfig(context.Background()); err == nil {
+		h.timezoneMu.Lock()
+		h.timezoneCache = config.Timezone
+		h.timezoneMu.Unlock()
+	}
+}
+
+func (h *MonitoringHandler) RefreshTimezone() {
+	h.loadTimezone()
 }

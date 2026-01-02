@@ -249,6 +249,74 @@ func (h *SettingsHandler) UpdateRetentionSettings(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, gin.H{"message": "Retention settings updated successfully"})
 }
+
+// GetTimezoneSettings godoc
+// @Summary Get timezone settings
+// @Description Get application timezone settings
+// @Tags settings
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} settings.TimezoneConfig
+// @Router /api/settings/timezone [get]
+func (h *SettingsHandler) GetTimezoneSettings(c *gin.Context) {
+	config, err := h.settingsRepo.GetTimezoneConfig(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, config)
+}
+
+// UpdateTimezoneSettings godoc
+// @Summary Update timezone settings
+// @Description Update application timezone settings
+// @Tags settings
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param settings body settings.TimezoneConfig true "Timezone settings"
+// @Success 200 {object} map[string]string
+// @Router /api/settings/timezone [put]
+func (h *SettingsHandler) UpdateTimezoneSettings(c *gin.Context) {
+	var config settings.TimezoneConfig
+	if err := c.ShouldBindJSON(&config); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User authentication required"})
+		return
+	}
+	
+	var userIDInt int
+	switch v := userID.(type) {
+	case int:
+		userIDInt = v
+	case float64:
+		userIDInt = int(v)
+	default:
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+	
+	ctx := c.Request.Context()
+	err := h.settingsRepo.Set(ctx, "timezone", config.Timezone, userIDInt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	// Refresh monitoring handler timezone cache
+	if monitoringHandler, ok := c.Get("monitoring_handler"); ok {
+		if mh, ok := monitoringHandler.(*MonitoringHandler); ok {
+			mh.RefreshTimezone()
+		}
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Timezone settings updated successfully"})
+}
 // @Summary Check email suppression status
 // @Description Check if email is suppressed in AWS SES
 // @Tags suppression

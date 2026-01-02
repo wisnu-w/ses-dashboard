@@ -22,10 +22,15 @@ type AWSConfig struct {
 	SecretKey string `json:"secret_key"`
 }
 
+type TimezoneConfig struct {
+	Timezone string `json:"timezone"`
+}
+
 type Repository interface {
 	Get(ctx context.Context, key string) (*Setting, error)
 	Set(ctx context.Context, key, value string, updatedBy int) error
 	GetAll(ctx context.Context) ([]*Setting, error)
 	GetAWSConfig(ctx context.Context) (*AWSConfig, error)
 	TestAWSConnection(ctx context.Context, config *AWSConfig) error
+	GetTimezoneConfig(ctx context.Context) (*TimezoneConfig, error)
 }

@@ -14,6 +14,10 @@ interface RetentionSettings {
   enabled: boolean;
 }
 
+interface TimezoneSettings {
+  timezone: string;
+}
+
 const SettingsPage = () => {
   const [settings, setSettings] = useState<AWSSettings>({
     enabled: false,
@@ -24,6 +28,9 @@ const SettingsPage = () => {
   const [retentionSettings, setRetentionSettings] = useState<RetentionSettings>({
     retention_days: 30,
     enabled: true
+  });
+  const [timezoneSettings, setTimezoneSettings] = useState<TimezoneSettings>({
+    timezone: 'Asia/Jakarta'
   });
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -54,6 +61,16 @@ const SettingsPage = () => {
       } else {
         console.error('Retention response error:', retentionResponse.status);
       }
+      
+      // Load timezone settings
+      const timezoneResponse = await fetch('/api/settings/timezone', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      
+      if (timezoneResponse.ok) {
+        const timezoneData = await timezoneResponse.json();
+        setTimezoneSettings(timezoneData);
+      }
     } catch (error) {
       console.error('Failed to load settings:', error);
     }
@@ -80,6 +97,33 @@ const SettingsPage = () => {
       setTimeout(() => setMessage(''), 3000);
     } catch (error: any) {
       setMessage(error.message || 'Failed to save retention settings');
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveTimezoneSettings = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/settings/timezone', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(timezoneSettings)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save timezone settings');
+      }
+      
+      setMessage('Timezone settings saved successfully');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error: any) {
+      setMessage(error.message || 'Failed to save timezone settings');
       setTimeout(() => setMessage(''), 5000);
     } finally {
       setLoading(false);
@@ -171,6 +215,48 @@ const SettingsPage = () => {
             </div>
           </div>
         )}
+
+        {/* Timezone Settings */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center mb-6">
+            <Settings className="w-6 h-6 text-purple-600 mr-3" />
+            <h2 className="text-xl font-semibold">Timezone Settings</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div className="max-w-md">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Application Timezone</label>
+              <select
+                value={timezoneSettings.timezone}
+                onChange={(e) => setTimezoneSettings({...timezoneSettings, timezone: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
+                <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
+                <option value="Asia/Jayapura">Asia/Jayapura (WIT)</option>
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">America/New_York (EST)</option>
+                <option value="Europe/London">Europe/London (GMT)</option>
+                <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                This timezone will be used for displaying dates and times in metrics and monitoring handlers
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
+            <button
+              onClick={saveTimezoneSettings}
+              disabled={loading}
+              className="inline-flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? 'Saving...' : 'Save Timezone Settings'}
+            </button>
+          </div>
+        </div>
 
         {/* Retention Settings */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

@@ -66,7 +66,7 @@ func main() {
 	// Initialize AWS client and sync service
 	// Initialize services
 	syncService := services.NewSyncService(
-		settingsRepo, // ⬅️ repo, bukan aws client
+		settingsRepo,
 		suppressionDBRepo,
 	)
 	cleanupService := services.NewCleanupService(settingsRepo, sesRepo)
@@ -79,7 +79,7 @@ func main() {
 	authUC := usecase.NewAuthUsecase(userRepo, cfg.App.JWTSecret)
 
 	snsHandler := http.NewSNSHandler(sesUC, cfg)
-	monitoringHandler := http.NewMonitoringHandler(sesUC)
+	monitoringHandler := http.NewMonitoringHandler(sesUC, settingsRepo)
 	authHandler := http.NewAuthHandler(authUC)
 	userHandler := http.NewUserHandler(authUC)
 	settingsHandler := http.NewSettingsHandler(settingsRepo)
@@ -131,6 +131,10 @@ func main() {
 	// ========================
 	api := r.Group("/api")
 	api.Use(http.JWTAuthMiddleware([]byte(cfg.App.JWTSecret)))
+	api.Use(func(c *gin.Context) {
+		c.Set("monitoring_handler", monitoringHandler)
+		c.Next()
+	})
 	{
 		api.GET("/events", monitoringHandler.GetEvents)
 		api.GET("/metrics", monitoringHandler.GetMetrics)
@@ -155,6 +159,8 @@ func main() {
 			admin.POST("/settings/aws/test", settingsHandler.TestAWSConnection)
 			admin.GET("/settings/retention", settingsHandler.GetRetentionSettings)
 			admin.PUT("/settings/retention", settingsHandler.UpdateRetentionSettings)
+			admin.GET("/settings/timezone", settingsHandler.GetTimezoneSettings)
+			admin.PUT("/settings/timezone", settingsHandler.UpdateTimezoneSettings)
 
 			// AWS SES Suppression management routes (admin only)
 			admin.GET("/suppression", suppressionHandler.GetSuppressions)
