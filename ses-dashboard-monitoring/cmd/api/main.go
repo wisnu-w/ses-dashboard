@@ -28,7 +28,6 @@ import (
 	_ "ses-monitoring/docs"
 	"ses-monitoring/internal/config"
 	"ses-monitoring/internal/delivery/http"
-	"ses-monitoring/internal/infrastructure/aws"
 	"ses-monitoring/internal/infrastructure/database"
 	"ses-monitoring/internal/infrastructure/repository"
 	"ses-monitoring/internal/services"
@@ -36,8 +35,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	files "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -65,9 +64,11 @@ func main() {
 	suppressionDBRepo := database.NewSuppressionRepository(db)
 
 	// Initialize AWS client and sync service
-	awsConfig, _ := settingsRepo.GetAWSConfig(context.Background())
-	awsClient := aws.NewSESClient(awsConfig)
-	syncService := services.NewSyncService(awsClient, suppressionDBRepo)
+	// Initialize services
+	syncService := services.NewSyncService(
+		settingsRepo, // ⬅️ repo, bukan aws client
+		suppressionDBRepo,
+	)
 	cleanupService := services.NewCleanupService(settingsRepo, sesRepo)
 
 	// Start background services
@@ -136,7 +137,7 @@ func main() {
 		api.GET("/metrics/daily", monitoringHandler.GetDailyMetrics)
 		api.GET("/metrics/monthly", monitoringHandler.GetMonthlyMetrics)
 		api.GET("/metrics/hourly", monitoringHandler.GetHourlyMetrics)
-		
+
 		// User management routes (admin only)
 		admin := api.Group("")
 		admin.Use(http.AdminMiddleware())
@@ -147,14 +148,14 @@ func main() {
 			admin.PUT("/users/:id/disable", userHandler.DisableUser)
 			admin.PUT("/users/:id/enable", userHandler.EnableUser)
 			admin.DELETE("/users/:id", userHandler.DeleteUser)
-			
+
 			// Settings routes (admin only)
 			admin.GET("/settings/aws", settingsHandler.GetAWSSettings)
 			admin.PUT("/settings/aws", settingsHandler.UpdateAWSSettings)
 			admin.POST("/settings/aws/test", settingsHandler.TestAWSConnection)
 			admin.GET("/settings/retention", settingsHandler.GetRetentionSettings)
 			admin.PUT("/settings/retention", settingsHandler.UpdateRetentionSettings)
-			
+
 			// AWS SES Suppression management routes (admin only)
 			admin.GET("/suppression", suppressionHandler.GetSuppressions)
 			admin.POST("/suppression", suppressionHandler.AddSuppression)
@@ -165,7 +166,7 @@ func main() {
 			admin.DELETE("/suppression/:email", suppressionHandler.RemoveSuppression)
 			admin.GET("/suppression/:email/status", settingsHandler.CheckEmailSuppression)
 		}
-		
+
 		// User routes (authenticated users)
 		api.PUT("/change-password", userHandler.ChangePassword)
 	}

@@ -7,34 +7,39 @@ import (
 	"time"
 
 	"ses-monitoring/internal/domain/models"
+	"ses-monitoring/internal/domain/settings"
 	"ses-monitoring/internal/infrastructure/aws"
 	"ses-monitoring/internal/infrastructure/database"
 )
 
 type SyncService struct {
-	awsClient *aws.SESClient
-	dbRepo    *database.SuppressionRepository
-	mu        sync.RWMutex
-	lastSync  time.Time
+	settingsRepo settings.Repository
+	dbRepo       *database.SuppressionRepository
+
+	mu             sync.RWMutex
+	lastSync       time.Time
 	syncInProgress bool
 }
 
-func NewSyncService(awsClient *aws.SESClient, dbRepo *database.SuppressionRepository) *SyncService {
+func NewSyncService(
+	settingsRepo settings.Repository,
+	dbRepo *database.SuppressionRepository,
+) *SyncService {
 	return &SyncService{
-		awsClient: awsClient,
-		dbRepo:    dbRepo,
+		settingsRepo: settingsRepo,
+		dbRepo:       dbRepo,
 	}
 }
 
-// StartBackgroundSync memulai sync otomatis setiap 5 menit (untuk testing)
+// StartBackgroundSync memulai sync otomatis setiap 5 menit
 func (s *SyncService) StartBackgroundSync(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute) // Lebih sering untuk testing
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
-	// Sync pertama kali saat startup (dengan delay 10 detik)
+	// Sync pertama setelah startup
 	go func() {
 		time.Sleep(10 * time.Second)
-		s.SyncNow(ctx)
+		_ = s.SyncNow(context.Background())
 	}()
 
 	for {
@@ -42,7 +47,7 @@ func (s *SyncService) StartBackgroundSync(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			go s.SyncNow(ctx)
+			go s.SyncNow(context.Background())
 		}
 	}
 }
@@ -66,10 +71,24 @@ func (s *SyncService) SyncNow(ctx context.Context) error {
 		log.Println("Sync process completed")
 	}()
 
+	// 🔥 AMBIL CONFIG TERBARU DARI DB
+	cfg, err := s.settingsRepo.GetAWSConfig(ctx)
+	if err != nil {
+		log.Printf("Failed to load AWS config: %v", err)
+		return err
+	}
+
+	if !cfg.Enabled {
+		log.Println("AWS integration disabled, skipping sync")
+		return nil
+	}
+
 	log.Println("Starting AWS SES suppression sync...")
 
-	// Get all data dari AWS
-	awsSuppressions, err := s.awsClient.GetSuppressionList(ctx)
+	// 🔥 SES CLIENT DIBUAT DI SINI (BUKAN DI INIT)
+	sesClient := aws.NewSESClient(cfg)
+
+	awsSuppressions, err := sesClient.GetSuppressionList(ctx)
 	if err != nil {
 		log.Printf("AWS failed: %v", err)
 		return err
@@ -82,19 +101,19 @@ func (s *SyncService) SyncNow(ctx context.Context) error {
 		return nil
 	}
 
-	// Convert semua ke domain models
 	var suppressions []*models.Suppression
-	for _, aws := range awsSuppressions {
+	now := time.Now()
+
+	for _, awsItem := range awsSuppressions {
 		suppressions = append(suppressions, &models.Suppression{
-			Email:     aws.Email,
-			Reason:    aws.Reason,
+			Email:     awsItem.Email,
+			Reason:    awsItem.Reason,
 			Source:    "AWS",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			CreatedAt: now,
+			UpdatedAt: now,
 		})
 	}
 
-	// Bulk insert semua sekaligus
 	err = s.dbRepo.BulkUpsert(suppressions)
 	if err != nil {
 		log.Printf("Failed to bulk insert suppressions: %v", err)
