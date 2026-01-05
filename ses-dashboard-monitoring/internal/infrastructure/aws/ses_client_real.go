@@ -175,17 +175,15 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 	
 	var allSuppressions []*SuppressionStatus
 	var nextToken *string
-	maxPages := 5 // Limit pages
-	pageCount := 0
 	
-	for pageCount < maxPages {
+	for {
 		result, err := sesClient.ListSuppressedDestinations(ctxWithTimeout, &sesv2.ListSuppressedDestinationsInput{
 			NextToken: nextToken,
-			PageSize:  aws.Int32(10), // Very small page size
+			PageSize:  aws.Int32(100), // Increase page size
 		})
 		
 		if err != nil {
-			return nil, fmt.Errorf("failed to list suppressed destinations (page %d): %w", pageCount+1, err)
+			return nil, fmt.Errorf("failed to list suppressed destinations: %w", err)
 		}
 		
 		for _, dest := range result.SuppressedDestinationSummaries {
@@ -197,13 +195,12 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 			})
 		}
 		
-		pageCount++
 		nextToken = result.NextToken
 		if nextToken == nil {
 			break
 		}
 		
-		// Longer delay between pages
+		// Rate limiting - increase delay for safety
 		time.Sleep(1 * time.Second)
 	}
 	
