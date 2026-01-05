@@ -45,9 +45,13 @@ const EventsTable = ({ events, pagination, onPageChange, loading = false }: Even
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
+      // Backend sudah mengirim waktu dalam timezone yang dikonfigurasi
+      // Jadi langsung tanpa konversi timezone
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'Invalid Date';
-      return date.toLocaleString();
+      
+      // Format tanpa konversi timezone browser
+      return date.toISOString().replace('T', ' ').substring(0, 19);
     } catch (error) {
       return 'Invalid Date';
     }
