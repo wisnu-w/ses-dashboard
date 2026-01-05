@@ -31,11 +31,8 @@ func NewSyncService(
 	}
 }
 
-// StartBackgroundSync memulai sync otomatis setiap 5 menit
+// StartBackgroundSync memulai sync otomatis dengan interval dinamis
 func (s *SyncService) StartBackgroundSync(ctx context.Context) {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
 	// Sync pertama setelah startup
 	go func() {
 		time.Sleep(10 * time.Second)
@@ -46,7 +43,20 @@ func (s *SyncService) StartBackgroundSync(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		default:
+			// Get current sync interval from settings
+			cfg, err := s.settingsRepo.GetAWSConfig(context.Background())
+			if err != nil || !cfg.Enabled {
+				time.Sleep(5 * time.Minute) // fallback interval
+				continue
+			}
+			
+			interval := time.Duration(cfg.SyncInterval) * time.Minute
+			if interval < time.Minute {
+				interval = 5 * time.Minute // minimum 1 minute
+			}
+			
+			time.Sleep(interval)
 			go s.SyncNow(context.Background())
 		}
 	}

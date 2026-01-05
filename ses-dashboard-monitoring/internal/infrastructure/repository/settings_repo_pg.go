@@ -39,6 +39,7 @@ func (r *settingsRepo) Set(ctx context.Context, key, value string, updatedBy int
 		"aws_region":        "AWS region for SES service",
 		"aws_access_key":    "AWS access key for SES authentication",
 		"aws_secret_key":    "AWS secret key for SES authentication",
+		"aws_sync_interval": "Auto sync interval for suppression list (minutes)",
 		"retention_days":    "Number of days to retain event logs (0 = never delete)",
 		"retention_enabled": "Enable/disable automatic log retention cleanup",
 		"timezone":          "Application timezone for date/time display",
@@ -97,6 +98,16 @@ func (r *settingsRepo) GetAWSConfig(ctx context.Context) (*settings.AWSConfig, e
 
 	if secretKey, err := r.Get(ctx, "aws_secret_key"); err == nil {
 		config.SecretKey = secretKey.Value
+	}
+
+	if syncInterval, err := r.Get(ctx, "aws_sync_interval"); err == nil {
+		if interval, parseErr := strconv.Atoi(syncInterval.Value); parseErr == nil {
+			config.SyncInterval = interval
+		} else {
+			config.SyncInterval = 5 // default 5 minutes
+		}
+	} else {
+		config.SyncInterval = 5 // default 5 minutes
 	}
 
 	return config, nil

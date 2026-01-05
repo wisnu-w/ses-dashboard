@@ -119,6 +119,12 @@ func (h *SettingsHandler) UpdateAWSSettings(c *gin.Context) {
 		}
 	}
 	
+	err = h.settingsRepo.Set(ctx, "aws_sync_interval", strconv.Itoa(config.SyncInterval), userIDInt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
 	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
 }
 

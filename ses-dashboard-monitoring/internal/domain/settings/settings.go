@@ -16,10 +16,11 @@ type Setting struct {
 }
 
 type AWSConfig struct {
-	Enabled   bool   `json:"enabled"`
-	Region    string `json:"region"`
-	AccessKey string `json:"access_key"`
-	SecretKey string `json:"secret_key"`
+	Enabled      bool   `json:"enabled"`
+	Region       string `json:"region"`
+	AccessKey    string `json:"access_key"`
+	SecretKey    string `json:"secret_key"`
+	SyncInterval int    `json:"sync_interval"` // in minutes
 }
 
 type TimezoneConfig struct {

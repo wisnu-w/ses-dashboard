@@ -7,6 +7,7 @@ interface AWSSettings {
   region: string;
   access_key: string;
   secret_key: string;
+  sync_interval: number;
 }
 
 interface RetentionSettings {
@@ -23,7 +24,8 @@ const SettingsPage = () => {
     enabled: false,
     region: 'us-east-1',
     access_key: '',
-    secret_key: ''
+    secret_key: '',
+    sync_interval: 5
   });
   const [retentionSettings, setRetentionSettings] = useState<RetentionSettings>({
     retention_days: 30,
@@ -378,6 +380,25 @@ const SettingsPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter secret key"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Auto Sync Interval</label>
+                  <select
+                    value={settings.sync_interval}
+                    onChange={(e) => setSettings({...settings, sync_interval: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value={1}>1 minute</option>
+                    <option value={5}>5 minutes</option>
+                    <option value={10}>10 minutes</option>
+                    <option value={15}>15 minutes</option>
+                    <option value={30}>30 minutes</option>
+                    <option value={60}>1 hour</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    How often to sync suppression list from AWS
+                  </p>
                 </div>
 
                 <div className="md:col-span-2 flex space-x-3">
