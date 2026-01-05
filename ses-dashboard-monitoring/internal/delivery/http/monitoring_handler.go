@@ -95,6 +95,12 @@ func (h *MonitoringHandler) GetEvents(c *gin.Context) {
 		return
 	}
 
+	// Convert timestamps to configured timezone
+	if err := h.convertEventsTimezone(events); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	totalPages := (total + limit - 1) / limit // Ceiling division
 
 	c.JSON(http.StatusOK, gin.H{
@@ -299,4 +305,22 @@ func (h *MonitoringHandler) loadTimezone() {
 
 func (h *MonitoringHandler) RefreshTimezone() {
 	h.loadTimezone()
+}
+
+func (h *MonitoringHandler) convertEventsTimezone(events []*sesevent.Event) error {
+	timezone := h.getTimezoneFromCache()
+	
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return err
+	}
+	
+	for i := range events {
+		// Convert EventTimestamp
+		events[i].EventTimestamp = events[i].EventTimestamp.In(loc)
+		// Convert CreatedAt
+		events[i].CreatedAt = events[i].CreatedAt.In(loc)
+	}
+	
+	return nil
 }
