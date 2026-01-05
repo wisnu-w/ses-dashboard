@@ -258,19 +258,23 @@ func (h *MonitoringHandler) convertMetricsTimezone(metrics interface{}) error {
 	case []sesevent.DailyMetrics:
 		for i := range m {
 			if t, err := time.Parse("2006-01-02", m[i].Date); err == nil {
-				m[i].Date = t.In(loc).Format("2006-01-02")
+				utcTime := t.UTC()
+				m[i].Date = utcTime.In(loc).Format("2006-01-02")
 			}
 		}
 	case []sesevent.MonthlyMetrics:
 		for i := range m {
 			if t, err := time.Parse("2006-01", m[i].Month); err == nil {
-				m[i].Month = t.In(loc).Format("2006-01")
+				utcTime := t.UTC()
+				m[i].Month = utcTime.In(loc).Format("2006-01")
 			}
 		}
 	case []sesevent.HourlyMetrics:
 		for i := range m {
 			if t, err := time.Parse("2006-01-02 15:04", m[i].Hour); err == nil {
-				m[i].Hour = t.In(loc).Format("2006-01-02 15:04")
+				// Assume database time is UTC
+				utcTime := t.UTC()
+				m[i].Hour = utcTime.In(loc).Format("2006-01-02 15:04")
 			}
 		}
 	}
