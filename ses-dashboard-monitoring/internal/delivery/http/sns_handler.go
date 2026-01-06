@@ -152,7 +152,7 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		event.ReportingMTA = sesEvent.Delivery.ReportingMTA
 	}
 
-	err := h.uc.HandleEvent(c.Request.Context(), event)
+	err = h.uc.HandleEvent(c.Request.Context(), event)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
