@@ -81,15 +81,16 @@ func (r *SuppressionRepository) processBatch(suppressions []*models.Suppression)
 	return nil
 }
 
-// GetAll mengembalikan semua suppressions
-func (r *SuppressionRepository) GetAll() ([]*models.Suppression, error) {
+// GetAll mengembalikan suppressions dengan pagination
+func (r *SuppressionRepository) GetAll(limit, offset int) ([]*models.Suppression, error) {
 	query := `
 		SELECT email, reason, source, created_at, updated_at 
 		FROM suppressions 
 		ORDER BY updated_at DESC
+		LIMIT $1 OFFSET $2
 	`
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +107,56 @@ func (r *SuppressionRepository) GetAll() ([]*models.Suppression, error) {
 	}
 
 	return suppressions, nil
+}
+
+// GetAllCount mengembalikan total count suppressions
+func (r *SuppressionRepository) GetAllCount() (int, error) {
+	query := `SELECT COUNT(*) FROM suppressions`
+	var count int
+	err := r.db.QueryRow(query).Scan(&count)
+	return count, err
+}
+
+// SearchSuppressions mencari suppressions dengan pagination
+func (r *SuppressionRepository) SearchSuppressions(searchTerm string, limit, offset int) ([]*models.Suppression, error) {
+	query := `
+		SELECT email, reason, source, created_at, updated_at 
+		FROM suppressions 
+		WHERE email ILIKE $1 OR reason ILIKE $1 OR source ILIKE $1
+		ORDER BY updated_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	search := "%" + searchTerm + "%"
+	rows, err := r.db.Query(query, search, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var suppressions []*models.Suppression
+	for rows.Next() {
+		s := &models.Suppression{}
+		err := rows.Scan(&s.Email, &s.Reason, &s.Source, &s.CreatedAt, &s.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		suppressions = append(suppressions, s)
+	}
+
+	return suppressions, nil
+}
+
+// GetSearchCount mengembalikan count hasil search
+func (r *SuppressionRepository) GetSearchCount(searchTerm string) (int, error) {
+	query := `
+		SELECT COUNT(*) FROM suppressions 
+		WHERE email ILIKE $1 OR reason ILIKE $1 OR source ILIKE $1
+	`
+	search := "%" + searchTerm + "%"
+	var count int
+	err := r.db.QueryRow(query, search).Scan(&count)
+	return count, err
 }
 
 // GetByEmail mencari suppression berdasarkan email
@@ -133,4 +184,84 @@ func (r *SuppressionRepository) Delete(email string) error {
 	query := `DELETE FROM suppressions WHERE email = $1`
 	_, err := r.db.Exec(query, email)
 	return err
+}
+
+// GetBySource mengembalikan suppressions berdasarkan source
+func (r *SuppressionRepository) GetBySource(source string) ([]*models.Suppression, error) {
+	query := `
+		SELECT email, reason, source, created_at, updated_at 
+		FROM suppressions 
+		WHERE source = $1
+		ORDER BY updated_at DESC
+	`
+
+	rows, err := r.db.Query(query, source)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var suppressions []*models.Suppression
+	for rows.Next() {
+		s := &models.Suppression{}
+		err := rows.Scan(&s.Email, &s.Reason, &s.Source, &s.CreatedAt, &s.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		suppressions = append(suppressions, s)
+	}
+
+	return suppressions, nil
+}
+
+// BulkDelete menghapus multiple suppressions berdasarkan email list
+func (r *SuppressionRepository) BulkDelete(emails []string) error {
+	if len(emails) == 0 {
+		return nil
+	}
+
+	log.Printf("Starting bulk delete for %d emails", len(emails))
+
+	// Process in batches
+	batchSize := 100
+	totalDeleted := 0
+
+	for i := 0; i < len(emails); i += batchSize {
+		end := i + batchSize
+		if end > len(emails) {
+			end = len(emails)
+		}
+
+		batch := emails[i:end]
+		log.Printf("Deleting batch %d-%d (%d emails)", i+1, end, len(batch))
+
+		// Create placeholders for IN clause
+		placeholders := make([]string, len(batch))
+		args := make([]interface{}, len(batch))
+		for j, email := range batch {
+			placeholders[j] = fmt.Sprintf("$%d", j+1)
+			args[j] = email
+		}
+
+		query := fmt.Sprintf("DELETE FROM suppressions WHERE email IN (%s)", strings.Join(placeholders, ","))
+		result, err := r.db.Exec(query, args...)
+		if err != nil {
+			return fmt.Errorf("failed to delete batch %d-%d: %w", i+1, end, err)
+		}
+
+		rowsAffected, _ := result.RowsAffected()
+		totalDeleted += int(rowsAffected)
+		log.Printf("Deleted %d rows in batch", rowsAffected)
+	}
+
+	log.Printf("Bulk delete completed: %d total emails deleted", totalDeleted)
+	return nil
+}
+
+// CountBySource menghitung jumlah suppressions berdasarkan source
+func (r *SuppressionRepository) CountBySource(source string) (int, error) {
+	query := `SELECT COUNT(*) FROM suppressions WHERE source = $1`
+	var count int
+	err := r.db.QueryRow(query, source).Scan(&count)
+	return count, err
 }

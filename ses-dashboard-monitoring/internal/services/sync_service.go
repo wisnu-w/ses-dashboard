@@ -62,7 +62,7 @@ func (s *SyncService) StartBackgroundSync(ctx context.Context) {
 	}
 }
 
-// SyncNow melakukan sync manual
+// SyncNow melakukan sync manual dengan full synchronization
 func (s *SyncService) SyncNow(ctx context.Context) error {
 	s.mu.Lock()
 	if s.syncInProgress {
@@ -81,8 +81,12 @@ func (s *SyncService) SyncNow(ctx context.Context) error {
 		log.Println("Sync process completed")
 	}()
 
+	// Create context with timeout for the entire sync operation
+	syncCtx, cancel := context.WithTimeout(ctx, 25*time.Minute)
+	defer cancel()
+
 	// 🔥 AMBIL CONFIG TERBARU DARI DB
-	cfg, err := s.settingsRepo.GetAWSConfig(ctx)
+	cfg, err := s.settingsRepo.GetAWSConfig(syncCtx)
 	if err != nil {
 		log.Printf("Failed to load AWS config: %v", err)
 		return err
@@ -93,44 +97,128 @@ func (s *SyncService) SyncNow(ctx context.Context) error {
 		return nil
 	}
 
-	log.Println("Starting AWS SES suppression sync...")
+	if cfg.AccessKey == "" || cfg.SecretKey == "" {
+		log.Println("AWS credentials not configured, skipping sync")
+		return nil
+	}
+
+	log.Printf("Starting AWS SES suppression sync (region: %s)...", cfg.Region)
 
 	// 🔥 SES CLIENT DIBUAT DI SINI (BUKAN DI INIT)
 	sesClient := aws.NewSESClient(cfg)
 
-	awsSuppressions, err := sesClient.GetSuppressionList(ctx)
+	// Test connection first
+	if err := sesClient.TestConnection(syncCtx); err != nil {
+		log.Printf("AWS connection test failed: %v", err)
+		return err
+	}
+
+	// Get all AWS suppressions
+	awsSuppressions, err := sesClient.GetSuppressionList(syncCtx)
 	if err != nil {
-		log.Printf("AWS failed: %v", err)
+		log.Printf("AWS sync failed: %v", err)
 		return err
 	}
 
 	log.Printf("Retrieved %d suppressions from AWS", len(awsSuppressions))
 
-	if len(awsSuppressions) == 0 {
-		log.Println("No suppressions found in AWS")
-		return nil
-	}
-
-	var suppressions []*models.Suppression
-	now := time.Now()
-
-	for _, awsItem := range awsSuppressions {
-		suppressions = append(suppressions, &models.Suppression{
-			Email:     awsItem.Email,
-			Reason:    awsItem.Reason,
-			Source:    "AWS",
-			CreatedAt: now,
-			UpdatedAt: now,
-		})
-	}
-
-	err = s.dbRepo.BulkUpsert(suppressions)
+	// Get all current DB suppressions from AWS source
+	dbSuppressions, err := s.dbRepo.GetBySource("AWS")
 	if err != nil {
-		log.Printf("Failed to bulk insert suppressions: %v", err)
+		log.Printf("Failed to get DB suppressions: %v", err)
 		return err
 	}
 
-	log.Printf("Sync completed: %d suppressions synced to database", len(suppressions))
+	log.Printf("Found %d AWS suppressions in database", len(dbSuppressions))
+
+	// Create maps for comparison
+	awsMap := make(map[string]*aws.SuppressionStatus)
+	dbMap := make(map[string]*models.Suppression)
+
+	for _, item := range awsSuppressions {
+		awsMap[item.Email] = item
+	}
+
+	for _, item := range dbSuppressions {
+		dbMap[item.Email] = item
+	}
+
+	// Find emails to add (in AWS but not in DB)
+	var toAdd []*models.Suppression
+	for email, awsItem := range awsMap {
+		if _, exists := dbMap[email]; !exists {
+			toAdd = append(toAdd, &models.Suppression{
+				Email:     awsItem.Email,
+				Reason:    awsItem.Reason,
+				Source:    "AWS",
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			})
+		}
+	}
+
+	// Find emails to remove (in DB but not in AWS)
+	var toRemove []string
+	for email := range dbMap {
+		if _, exists := awsMap[email]; !exists {
+			toRemove = append(toRemove, email)
+		}
+	}
+
+	// Find emails to update (different reason)
+	var toUpdate []*models.Suppression
+	for email, awsItem := range awsMap {
+		if dbItem, exists := dbMap[email]; exists {
+			if dbItem.Reason != awsItem.Reason {
+				toUpdate = append(toUpdate, &models.Suppression{
+					Email:     awsItem.Email,
+					Reason:    awsItem.Reason,
+					Source:    "AWS",
+					CreatedAt: dbItem.CreatedAt,
+					UpdatedAt: time.Now(),
+				})
+			}
+		}
+	}
+
+	log.Printf("Sync plan: %d to add, %d to remove, %d to update", len(toAdd), len(toRemove), len(toUpdate))
+
+	// Execute sync operations
+	if len(toAdd) > 0 {
+		if err := s.dbRepo.BulkUpsert(toAdd); err != nil {
+			log.Printf("Failed to add suppressions: %v", err)
+			return err
+		}
+		log.Printf("Added %d suppressions", len(toAdd))
+	}
+
+	if len(toUpdate) > 0 {
+		if err := s.dbRepo.BulkUpsert(toUpdate); err != nil {
+			log.Printf("Failed to update suppressions: %v", err)
+			return err
+		}
+		log.Printf("Updated %d suppressions", len(toUpdate))
+	}
+
+	if len(toRemove) > 0 {
+		if err := s.dbRepo.BulkDelete(toRemove); err != nil {
+			log.Printf("Failed to remove suppressions: %v", err)
+			return err
+		}
+		log.Printf("Removed %d suppressions", len(toRemove))
+	}
+
+	// Final count verification
+	finalCount, err := s.dbRepo.CountBySource("AWS")
+	if err != nil {
+		log.Printf("Failed to get final count: %v", err)
+	} else {
+		log.Printf("Sync completed successfully: AWS=%d, DB=%d", len(awsSuppressions), finalCount)
+		if finalCount != len(awsSuppressions) {
+			log.Printf("WARNING: Count mismatch after sync! AWS=%d, DB=%d", len(awsSuppressions), finalCount)
+		}
+	}
+
 	return nil
 }
 

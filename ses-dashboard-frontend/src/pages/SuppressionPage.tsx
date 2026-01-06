@@ -9,6 +9,16 @@ interface SyncStatus {
   aws_enabled: boolean;
 }
 
+interface SuppressionResponse {
+  suppressions: SuppressionEntry[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
 interface SuppressionEntry {
   id: number;
   email: string;
@@ -24,6 +34,12 @@ const SuppressionPage = () => {
   const [suppressions, setSuppressions] = useState<SuppressionEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkAction, setBulkAction] = useState<'add' | 'remove'>('add');
@@ -55,6 +71,8 @@ const SuppressionPage = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', limit.toString());
       if (search) params.append('search', search);
       
       const response = await fetch(`/api/suppression?${params}`, {
@@ -62,8 +80,12 @@ const SuppressionPage = () => {
       });
       
       if (response.ok) {
-        const data = await response.json();
+        const data: SuppressionResponse = await response.json();
         setSuppressions(data.suppressions || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.total_pages || 0);
+        setHasNext(data.has_next || false);
+        setHasPrev(data.has_prev || false);
       }
     } catch (error) {
       console.error('Failed to load suppressions:', error);
@@ -225,7 +247,11 @@ const SuppressionPage = () => {
       
       if (response.ok) {
         const result = await response.json();
-        setMessage(`Bulk remove completed: ${result.success_count} success, ${result.failed_count} failed`);
+        if (result.failed_count > 0) {
+          setMessage(`Bulk remove completed: ${result.success_count} success, ${result.failed_count} failed. Failed emails: ${result.failed_emails.join(', ')}`);
+        } else {
+          setMessage(`Bulk remove completed: ${result.success_count} emails removed successfully`);
+        }
         setSelectedEmails([]);
         setBulkEmails('');
         setShowBulkModal(false);
@@ -250,12 +276,16 @@ const SuppressionPage = () => {
   };
 
   const selectAllEmails = () => {
-    if (selectedEmails.length === filteredSuppressions.length) {
+    if (selectedEmails.length === suppressions.length) {
       setSelectedEmails([]);
     } else {
-      setSelectedEmails(filteredSuppressions.map(s => s.email));
+      setSelectedEmails(suppressions.map(s => s.email));
     }
   };
+
+  useEffect(() => {
+    setPage(1); // Reset to first page when search changes
+  }, [search]);
 
   useEffect(() => {
     loadSuppressions();
@@ -264,15 +294,10 @@ const SuppressionPage = () => {
     // Auto refresh sync status every 30 seconds
     const interval = setInterval(loadSyncStatus, 30000);
     return () => clearInterval(interval);
-  }, [search]);
+  }, [page, limit, search]);
 
   // Check if AWS is disabled
   const isAWSDisabled = syncStatus ? !syncStatus.aws_enabled : false;
-
-  const filteredSuppressions = suppressions.filter(s => 
-    s.email.toLowerCase().includes(search.toLowerCase()) ||
-    s.reason.toLowerCase().includes(search.toLowerCase())
-  );
 
   return (
     <Layout title="Suppression List">
@@ -400,17 +425,41 @@ const SuppressionPage = () => {
           </div>
         )}
 
-        {/* Search */}
+        {/* Search and Controls */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by email or reason..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by email, reason, or source..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <label className="text-sm text-gray-600">Show:</label>
+                <select
+                  value={limit}
+                  onChange={(e) => {
+                    setLimit(Number(e.target.value));
+                    setPage(1);
+                  }}
+                  className="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={500}>500</option>
+                </select>
+                <span className="text-sm text-gray-600">per page</span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Showing {suppressions.length > 0 ? ((page - 1) * limit + 1) : 0} to {Math.min(page * limit, total)} of {total.toLocaleString()} entries
+              </div>
+            </div>
           </div>
         </div>
 
@@ -423,7 +472,7 @@ const SuppressionPage = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <input
                       type="checkbox"
-                      checked={selectedEmails.length === filteredSuppressions.length && filteredSuppressions.length > 0}
+                      checked={selectedEmails.length === suppressions.length && suppressions.length > 0}
                       onChange={selectAllEmails}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
@@ -441,12 +490,12 @@ const SuppressionPage = () => {
                   <tr>
                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">Loading...</td>
                   </tr>
-                ) : filteredSuppressions.length === 0 ? (
+                ) : suppressions.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">No suppressed emails found</td>
                   </tr>
                 ) : (
-                  filteredSuppressions.map((suppression) => (
+                  suppressions.map((suppression) => (
                     <tr key={suppression.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <input
@@ -503,6 +552,75 @@ const SuppressionPage = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setPage(1)}
+                  disabled={!hasPrev}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => setPage(page - 1)}
+                  disabled={!hasPrev}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`px-3 py-1 text-sm border rounded ${
+                        page === pageNum
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={!hasNext}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => setPage(totalPages)}
+                  disabled={!hasNext}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Last
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Bulk Action Modal */}

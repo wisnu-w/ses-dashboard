@@ -2,8 +2,11 @@ package http
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"strconv"
 
+	"ses-monitoring/internal/domain/models"
 	"ses-monitoring/internal/domain/settings"
 	"ses-monitoring/internal/domain/suppression"
 	"ses-monitoring/internal/infrastructure/aws"
@@ -55,36 +58,91 @@ type BulkRemoveRequest struct {
 }
 
 // GetSuppressions godoc
-// @Summary Get suppressions from new table
-// @Description Get list of suppressed emails from suppressions table
+// @Summary Get suppressions with pagination
+// @Description Get list of suppressed emails from suppressions table with pagination
 // @Tags suppression
 // @Produce json
 // @Security BearerAuth
+// @Param page query int false "Page number (default: 1)"
+// @Param limit query int false "Items per page (default: 50, max: 1000)"
+// @Param search query string false "Search term for email, reason, or source"
 // @Success 200 {object} map[string]interface{}
 // @Failure 500 {object} map[string]string
 // @Router /api/suppression [get]
 func (h *SuppressionHandler) GetSuppressions(c *gin.Context) {
+	// Parse pagination parameters
+	page := 1
+	if p := c.Query("page"); p != "" {
+		if parsed, err := strconv.Atoi(p); err == nil && parsed > 0 {
+			page = parsed
+		}
+	}
+	
+	limit := 50 // Default page size
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
+			if parsed > 1000 {
+				parsed = 1000 // Max limit
+			}
+			limit = parsed
+		}
+	}
+	
+	offset := (page - 1) * limit
+	searchTerm := c.Query("search")
+	
 	// Check if AWS integration is enabled
 	config, err := h.settingsRepo.GetAWSConfig(c.Request.Context())
 	if err != nil || !config.Enabled {
 		c.JSON(http.StatusOK, gin.H{
 			"suppressions": []interface{}{},
 			"total":        0,
+			"page":         page,
+			"limit":        limit,
+			"total_pages":  0,
 			"message":      "AWS integration is disabled",
 		})
 		return
 	}
 	
-	// Get data from new suppressions table
-	suppressions, err := h.suppressionDBRepo.GetAll()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get suppressions: " + err.Error()})
-		return
+	var suppressions []*models.Suppression
+	var total int
+	
+	// Get data with search or without
+	if searchTerm != "" {
+		suppressions, err = h.suppressionDBRepo.SearchSuppressions(searchTerm, limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search suppressions: " + err.Error()})
+			return
+		}
+		total, err = h.suppressionDBRepo.GetSearchCount(searchTerm)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get search count: " + err.Error()})
+			return
+		}
+	} else {
+		suppressions, err = h.suppressionDBRepo.GetAll(limit, offset)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get suppressions: " + err.Error()})
+			return
+		}
+		total, err = h.suppressionDBRepo.GetAllCount()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get total count: " + err.Error()})
+			return
+		}
 	}
+	
+	totalPages := (total + limit - 1) / limit // Ceiling division
 	
 	c.JSON(http.StatusOK, gin.H{
 		"suppressions": suppressions,
-		"total":        len(suppressions),
+		"total":        total,
+		"page":         page,
+		"limit":        limit,
+		"total_pages":  totalPages,
+		"has_next":     page < totalPages,
+		"has_prev":     page > 1,
 	})
 }
 
@@ -265,7 +323,13 @@ func (h *SuppressionHandler) RemoveSuppression(c *gin.Context) {
 		return
 	}
 	
-	c.JSON(http.StatusOK, gin.H{"message": "Email removed from AWS SES suppression list"})
+	// If AWS removal successful, also remove from local DB
+	if err := h.suppressionDBRepo.Delete(email); err != nil {
+		log.Printf("Warning: Failed to remove %s from local DB: %v", email, err)
+		// Don't fail the operation, just log the warning
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Email removed from AWS SES suppression list and local database"})
 }
 
 // BulkRemoveSuppression godoc
@@ -310,9 +374,18 @@ func (h *SuppressionHandler) BulkRemoveSuppression(c *gin.Context) {
 	for _, email := range req.Emails {
 		err := sesClient.RemoveFromSuppression(c.Request.Context(), email)
 		if err != nil {
+			log.Printf("Failed to remove %s from AWS: %v", email, err)
 			failedEmails = append(failedEmails, email)
 			continue
 		}
+		
+		// If AWS removal successful, also remove from local DB
+		if err := h.suppressionDBRepo.Delete(email); err != nil {
+			log.Printf("Warning: Failed to remove %s from local DB: %v", email, err)
+			// Don't fail the operation, just log the warning
+		}
+		
+		log.Printf("Successfully removed %s from AWS and local DB", email)
 		successCount++
 	}
 	
@@ -321,6 +394,7 @@ func (h *SuppressionHandler) BulkRemoveSuppression(c *gin.Context) {
 		"success_count": successCount,
 		"failed_count":  len(failedEmails),
 		"failed_emails": failedEmails,
+		"details":       "Check server logs for detailed error messages",
 	})
 }
 
@@ -369,9 +443,9 @@ func (h *SuppressionHandler) GetSyncStatus(c *gin.Context) {
 	config, err := h.settingsRepo.GetAWSConfig(c.Request.Context())
 	count := 0
 	if err == nil && config.Enabled {
-		// Only query DB if AWS is enabled
-		if suppressions, err := h.suppressionDBRepo.GetAll(); err == nil {
-			count = len(suppressions)
+		// Use count method instead of loading all data
+		if dbCount, err := h.suppressionDBRepo.CountBySource("AWS"); err == nil {
+			count = dbCount
 		}
 	}
 	
