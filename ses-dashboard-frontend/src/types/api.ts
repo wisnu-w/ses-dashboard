@@ -63,32 +63,41 @@ export interface MetricsResponse {
 // API Types for SES Dashboard
 export interface DailyMetrics {
   date: string;
+  total_events: number;
   send_count: number;
   delivery_count: number;
   bounce_count: number;
   complaint_count: number;
   open_count: number;
   click_count: number;
+  bounce_rate: number;
+  delivery_rate: number;
 }
 
 export interface MonthlyMetrics {
   month: string;
+  total_events: number;
   send_count: number;
   delivery_count: number;
   bounce_count: number;
   complaint_count: number;
   open_count: number;
   click_count: number;
+  bounce_rate: number;
+  delivery_rate: number;
 }
 
 export interface HourlyMetrics {
-  hour: number;
+  hour: string;
+  total_events: number;
   send_count: number;
   delivery_count: number;
   bounce_count: number;
   complaint_count: number;
   open_count: number;
   click_count: number;
+  bounce_rate: number;
+  delivery_rate: number;
 }
 
 export interface User {

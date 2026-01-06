@@ -27,9 +27,10 @@ type Config struct {
 	} `yaml:"database"`
 
 	AWS struct {
-		Region    string `yaml:"region"`
-		AccessKey string `yaml:"access_key"`
-		SecretKey string `yaml:"secret_key"`
+		Region      string `yaml:"region"`
+		AccessKey   string `yaml:"access_key"`
+		SecretKey   string `yaml:"secret_key"`
+		SNSTopicARN string `yaml:"sns_topic_arn"`
 	} `yaml:"aws"`
 }
 
@@ -53,6 +54,7 @@ func Load(path string) (*Config, error) {
 	cfg.AWS.Region = getEnv("AWS_REGION", "")
 	cfg.AWS.AccessKey = getEnv("AWS_ACCESS_KEY", "")
 	cfg.AWS.SecretKey = getEnv("AWS_SECRET_KEY", "")
+	cfg.AWS.SNSTopicARN = getEnv("SNS_TOPIC_ARN", "")
 
 	// If environment variables are not set, fallback to YAML file
 	if cfg.App.Name == "" || cfg.Database.Host == "" {
@@ -60,23 +62,54 @@ func Load(path string) (*Config, error) {
 			yamlCfg := &Config{}
 			if err := yaml.Unmarshal(b, yamlCfg); err == nil {
 				// Use YAML values only if env vars are empty
-				if cfg.App.Name == "" { cfg.App.Name = yamlCfg.App.Name }
-				if cfg.App.Env == "" { cfg.App.Env = yamlCfg.App.Env }
-				if cfg.App.Port == 0 { cfg.App.Port = yamlCfg.App.Port }
-				if cfg.App.JWTSecret == "" { cfg.App.JWTSecret = yamlCfg.App.JWTSecret }
-				if os.Getenv("ENABLE_SWAGGER") == "" { cfg.App.EnableSwagger = yamlCfg.App.EnableSwagger }
+				if cfg.App.Name == "" {
+					cfg.App.Name = yamlCfg.App.Name
+				}
+				if cfg.App.Env == "" {
+					cfg.App.Env = yamlCfg.App.Env
+				}
+				if cfg.App.Port == 0 {
+					cfg.App.Port = yamlCfg.App.Port
+				}
+				if cfg.App.JWTSecret == "" {
+					cfg.App.JWTSecret = yamlCfg.App.JWTSecret
+				}
+				if os.Getenv("ENABLE_SWAGGER") == "" {
+					cfg.App.EnableSwagger = yamlCfg.App.EnableSwagger
+				}
 				cfg.App.LogBody = yamlCfg.App.LogBody
 
-				if cfg.Database.Host == "" { cfg.Database.Host = yamlCfg.Database.Host }
-				if cfg.Database.Port == 0 { cfg.Database.Port = yamlCfg.Database.Port }
-				if cfg.Database.Name == "" { cfg.Database.Name = yamlCfg.Database.Name }
-				if cfg.Database.User == "" { cfg.Database.User = yamlCfg.Database.User }
-				if cfg.Database.Password == "" { cfg.Database.Password = yamlCfg.Database.Password }
-				if cfg.Database.SSLMode == "" { cfg.Database.SSLMode = yamlCfg.Database.SSLMode }
+				if cfg.Database.Host == "" {
+					cfg.Database.Host = yamlCfg.Database.Host
+				}
+				if cfg.Database.Port == 0 {
+					cfg.Database.Port = yamlCfg.Database.Port
+				}
+				if cfg.Database.Name == "" {
+					cfg.Database.Name = yamlCfg.Database.Name
+				}
+				if cfg.Database.User == "" {
+					cfg.Database.User = yamlCfg.Database.User
+				}
+				if cfg.Database.Password == "" {
+					cfg.Database.Password = yamlCfg.Database.Password
+				}
+				if cfg.Database.SSLMode == "" {
+					cfg.Database.SSLMode = yamlCfg.Database.SSLMode
+				}
 
-				if cfg.AWS.Region == "" { cfg.AWS.Region = yamlCfg.AWS.Region }
-				if cfg.AWS.AccessKey == "" { cfg.AWS.AccessKey = yamlCfg.AWS.AccessKey }
-				if cfg.AWS.SecretKey == "" { cfg.AWS.SecretKey = yamlCfg.AWS.SecretKey }
+				if cfg.AWS.Region == "" {
+					cfg.AWS.Region = yamlCfg.AWS.Region
+				}
+				if cfg.AWS.AccessKey == "" {
+					cfg.AWS.AccessKey = yamlCfg.AWS.AccessKey
+				}
+				if cfg.AWS.SecretKey == "" {
+					cfg.AWS.SecretKey = yamlCfg.AWS.SecretKey
+				}
+				if cfg.AWS.SNSTopicARN == "" {
+					cfg.AWS.SNSTopicARN = yamlCfg.AWS.SNSTopicARN
+				}
 			}
 		}
 	}

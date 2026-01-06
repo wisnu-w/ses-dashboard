@@ -24,7 +24,9 @@ func JWTAuthMiddleware(secret []byte) gin.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		claims := jwt.MapClaims{}
+		parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+		token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return secret, nil
 		})
 		if err != nil || !token.Valid {
@@ -33,10 +35,12 @@ func JWTAuthMiddleware(secret []byte) gin.HandlerFunc {
 			return
 		}
 
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			c.Set("user_id", claims["user_id"])
-			c.Set("username", claims["username"])
-			c.Set("claims", claims)
+		c.Set("claims", claims)
+		if userID, ok := claims["user_id"]; ok {
+			c.Set("user_id", userID)
+		}
+		if username, ok := claims["username"]; ok {
+			c.Set("username", username)
 		}
 
 		c.Next()

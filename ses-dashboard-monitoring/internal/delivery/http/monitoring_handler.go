@@ -268,6 +268,13 @@ func (h *MonitoringHandler) convertMetricsTimezone(metrics interface{}) error {
 				m[i].Date = utcTime.In(loc).Format("2006-01-02")
 			}
 		}
+	case []*sesevent.DailyMetrics:
+		for i := range m {
+			if t, err := time.Parse("2006-01-02", m[i].Date); err == nil {
+				utcTime := t.UTC()
+				m[i].Date = utcTime.In(loc).Format("2006-01-02")
+			}
+		}
 	case []sesevent.MonthlyMetrics:
 		for i := range m {
 			if t, err := time.Parse("2006-01", m[i].Month); err == nil {
@@ -275,7 +282,22 @@ func (h *MonitoringHandler) convertMetricsTimezone(metrics interface{}) error {
 				m[i].Month = utcTime.In(loc).Format("2006-01")
 			}
 		}
+	case []*sesevent.MonthlyMetrics:
+		for i := range m {
+			if t, err := time.Parse("2006-01", m[i].Month); err == nil {
+				utcTime := t.UTC()
+				m[i].Month = utcTime.In(loc).Format("2006-01")
+			}
+		}
 	case []sesevent.HourlyMetrics:
+		for i := range m {
+			if t, err := time.Parse("2006-01-02 15:04", m[i].Hour); err == nil {
+				// Assume database time is UTC
+				utcTime := t.UTC()
+				m[i].Hour = utcTime.In(loc).Format("2006-01-02 15:04")
+			}
+		}
+	case []*sesevent.HourlyMetrics:
 		for i := range m {
 			if t, err := time.Parse("2006-01-02 15:04", m[i].Hour); err == nil {
 				// Assume database time is UTC
@@ -309,18 +331,18 @@ func (h *MonitoringHandler) RefreshTimezone() {
 
 func (h *MonitoringHandler) convertEventsTimezone(events []*sesevent.Event) error {
 	timezone := h.getTimezoneFromCache()
-	
+
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return err
 	}
-	
+
 	for i := range events {
 		// Convert EventTimestamp
 		events[i].EventTimestamp = events[i].EventTimestamp.In(loc)
 		// Convert CreatedAt
 		events[i].CreatedAt = events[i].CreatedAt.In(loc)
 	}
-	
+
 	return nil
 }

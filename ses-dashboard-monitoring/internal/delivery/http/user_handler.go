@@ -1,10 +1,11 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
-	"strconv"
 	"ses-monitoring/internal/domain/user"
 	"ses-monitoring/internal/usecase"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -155,7 +156,25 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	id := int(userID.(float64))
+	var id int
+	switch value := userID.(type) {
+	case int:
+		id = value
+	case int64:
+		id = int(value)
+	case float64:
+		id = int(value)
+	case json.Number:
+		parsed, err := value.Int64()
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+			return
+		}
+		id = int(parsed)
+	default:
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+		return
+	}
 
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

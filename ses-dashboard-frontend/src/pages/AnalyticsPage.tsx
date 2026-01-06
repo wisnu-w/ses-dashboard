@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Calendar, BarChart3, PieChart } from 'lucide-react';
+import { TrendingUp, Calendar, BarChart3 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { LineChartComponent, BarChartComponent } from '../components/Charts';
 import { metricsService } from '../services/api';
@@ -9,6 +9,14 @@ const AnalyticsPage = () => {
   const [monthlyMetrics, setMonthlyMetrics] = useState<MonthlyMetrics[]>([]);
   const [hourlyMetrics, setHourlyMetrics] = useState<HourlyMetrics[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const parseHour = (value: string): number | null => {
+    const parts = value.split(' ');
+    const timePart = parts.length > 1 ? parts[1] : value;
+    const hourPart = timePart.split(':')[0];
+    const hourNumber = Number(hourPart);
+    return Number.isNaN(hourNumber) ? null : hourNumber;
+  };
 
   const loadData = async () => {
     try {
@@ -57,13 +65,18 @@ const AnalyticsPage = () => {
   }
 
   const totalMonthlyEmails = monthlyMetrics.reduce((sum, metric) => sum + metric.send_count, 0);
+  const maxMonthlySend = Math.max(...monthlyMetrics.map((metric) => metric.send_count), 0);
+  const maxHourlySend = Math.max(...hourlyMetrics.map((metric) => metric.send_count), 0);
   const avgDeliveryRate = monthlyMetrics.length > 0 
     ? monthlyMetrics.reduce((sum, metric) => sum + (metric.delivery_count / Math.max(metric.send_count, 1)), 0) / monthlyMetrics.length * 100
     : 0;
-  const peakHour = hourlyMetrics.reduce((max, metric) => 
-    metric.send_count > max.send_count ? metric : max, 
-    hourlyMetrics[0] || { hour: 0, send_count: 0 }
+  const peakHourMetric = hourlyMetrics.reduce(
+    (max, metric) => (metric.send_count > max.send_count ? metric : max),
+    hourlyMetrics[0] || { hour: '', send_count: 0 }
   );
+  const peakHourValue = parseHour(peakHourMetric.hour);
+  const peakHourLabel = peakHourValue === null ? peakHourMetric.hour : `${peakHourValue}:00`;
+  const sortedHourlyMetrics = [...hourlyMetrics].sort((a, b) => b.send_count - a.send_count);
 
   return (
     <Layout title="Analytics">
@@ -107,7 +120,7 @@ const AnalyticsPage = () => {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Peak Hour</p>
-                <p className="text-2xl font-bold text-gray-900">{peakHour.hour}:00</p>
+                <p className="text-2xl font-bold text-gray-900">{peakHourLabel}</p>
               </div>
             </div>
           </div>
@@ -146,7 +159,7 @@ const AnalyticsPage = () => {
                       <div 
                         className="bg-blue-600 h-2 rounded-full" 
                         style={{ 
-                          width: `${Math.min((metric.send_count / Math.max(...monthlyMetrics.map(m => m.send_count))) * 100, 100)}%` 
+                          width: `${maxMonthlySend > 0 ? Math.min((metric.send_count / maxMonthlySend) * 100, 100) : 0}%` 
                         }}
                       ></div>
                     </div>
@@ -159,12 +172,16 @@ const AnalyticsPage = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Peak Hours Analysis</h3>
             <div className="space-y-4">
-              {hourlyMetrics
-                .sort((a, b) => b.send_count - a.send_count)
+              {sortedHourlyMetrics
                 .slice(0, 6)
-                .map((metric, index) => (
+                .map((metric, index) => {
+                  const hourValue = parseHour(metric.hour);
+                  const hourLabel = hourValue === null
+                    ? metric.hour
+                    : `${hourValue}:00 - ${(hourValue + 1) % 24}:00`;
+                  return (
                 <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{metric.hour}:00 - {metric.hour + 1}:00</span>
+                  <span className="text-sm text-gray-600">{hourLabel}</span>
                   <div className="flex items-center space-x-4">
                     <span className="text-sm font-medium text-gray-900">
                       {metric.send_count.toLocaleString()}
@@ -173,13 +190,13 @@ const AnalyticsPage = () => {
                       <div 
                         className="bg-purple-600 h-2 rounded-full" 
                         style={{ 
-                          width: `${Math.min((metric.send_count / Math.max(...hourlyMetrics.map(h => h.send_count))) * 100, 100)}%` 
+                          width: `${maxHourlySend > 0 ? Math.min((metric.send_count / maxHourlySend) * 100, 100) : 0}%` 
                         }}
                       ></div>
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         </div>
