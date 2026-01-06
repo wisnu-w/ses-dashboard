@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"sync"
@@ -21,13 +22,24 @@ type MonitoringHandler struct {
 	// Timezone cache
 	timezoneMu    sync.RWMutex
 	timezoneCache string
+
+	metricsCacheMu sync.RWMutex
+	metricsCache   map[string]metricsCacheItem
 }
+
+type metricsCacheItem struct {
+	data      interface{}
+	expiresAt time.Time
+}
+
+const metricsCacheTTL = 30 * time.Second
 
 func NewMonitoringHandler(uc *usecase.SESUsecase, settingsRepo settings.Repository) *MonitoringHandler {
 	h := &MonitoringHandler{
 		uc:            uc,
 		settingsRepo:  settingsRepo,
 		timezoneCache: "Asia/Jakarta", // default
+		metricsCache:  make(map[string]metricsCacheItem),
 	}
 	h.loadTimezone() // Load initial timezone
 	return h
@@ -138,6 +150,14 @@ type MetricsResponse struct {
 // @Failure 500 {object} map[string]string
 // @Router /api/metrics [get]
 func (h *MonitoringHandler) GetMetrics(c *gin.Context) {
+	cacheKey := "summary:" + h.getTimezoneFromCache()
+	if cached, ok := h.getMetricsCache(cacheKey); ok {
+		if metrics, ok := cached.(MetricsResponse); ok {
+			c.JSON(http.StatusOK, metrics)
+			return
+		}
+	}
+
 	total, err := h.uc.GetEventCount(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -174,6 +194,7 @@ func (h *MonitoringHandler) GetMetrics(c *gin.Context) {
 		DeliveryRate:   deliveryRate,
 	}
 
+	h.setMetricsCache(cacheKey, metrics)
 	c.JSON(http.StatusOK, metrics)
 }
 
@@ -187,7 +208,26 @@ func (h *MonitoringHandler) GetMetrics(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/metrics/daily [get]
 func (h *MonitoringHandler) GetDailyMetrics(c *gin.Context) {
-	metrics, err := h.uc.GetDailyMetrics(c.Request.Context())
+	now := time.Now().UTC()
+	start, end, err := h.parseDateRange(
+		c,
+		now.AddDate(0, 0, -30),
+		now,
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	cacheKey := h.buildMetricsCacheKey("daily", start, end)
+	if cached, ok := h.getMetricsCache(cacheKey); ok {
+		if metrics, ok := cached.([]*sesevent.DailyMetrics); ok {
+			c.JSON(http.StatusOK, gin.H{"daily_metrics": metrics})
+			return
+		}
+	}
+
+	metrics, err := h.uc.GetDailyMetrics(c.Request.Context(), start, end)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -199,6 +239,7 @@ func (h *MonitoringHandler) GetDailyMetrics(c *gin.Context) {
 		return
 	}
 
+	h.setMetricsCache(cacheKey, metrics)
 	c.JSON(http.StatusOK, gin.H{"daily_metrics": metrics})
 }
 
@@ -212,7 +253,27 @@ func (h *MonitoringHandler) GetDailyMetrics(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/metrics/monthly [get]
 func (h *MonitoringHandler) GetMonthlyMetrics(c *gin.Context) {
-	metrics, err := h.uc.GetMonthlyMetrics(c.Request.Context())
+	now := time.Now().UTC()
+	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	start, end, err := h.parseDateRange(
+		c,
+		startOfMonth.AddDate(0, -11, 0),
+		now,
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	cacheKey := h.buildMetricsCacheKey("monthly", start, end)
+	if cached, ok := h.getMetricsCache(cacheKey); ok {
+		if metrics, ok := cached.([]*sesevent.MonthlyMetrics); ok {
+			c.JSON(http.StatusOK, gin.H{"monthly_metrics": metrics})
+			return
+		}
+	}
+
+	metrics, err := h.uc.GetMonthlyMetrics(c.Request.Context(), start, end)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -224,6 +285,7 @@ func (h *MonitoringHandler) GetMonthlyMetrics(c *gin.Context) {
 		return
 	}
 
+	h.setMetricsCache(cacheKey, metrics)
 	c.JSON(http.StatusOK, gin.H{"monthly_metrics": metrics})
 }
 
@@ -237,7 +299,26 @@ func (h *MonitoringHandler) GetMonthlyMetrics(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/metrics/hourly [get]
 func (h *MonitoringHandler) GetHourlyMetrics(c *gin.Context) {
-	metrics, err := h.uc.GetHourlyMetrics(c.Request.Context())
+	now := time.Now().UTC()
+	start, end, err := h.parseDateRange(
+		c,
+		now.Add(-48*time.Hour),
+		now,
+	)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	cacheKey := h.buildMetricsCacheKey("hourly", start, end)
+	if cached, ok := h.getMetricsCache(cacheKey); ok {
+		if metrics, ok := cached.([]*sesevent.HourlyMetrics); ok {
+			c.JSON(http.StatusOK, gin.H{"hourly_metrics": metrics})
+			return
+		}
+	}
+
+	metrics, err := h.uc.GetHourlyMetrics(c.Request.Context(), start, end)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -249,7 +330,76 @@ func (h *MonitoringHandler) GetHourlyMetrics(c *gin.Context) {
 		return
 	}
 
+	h.setMetricsCache(cacheKey, metrics)
 	c.JSON(http.StatusOK, gin.H{"hourly_metrics": metrics})
+}
+
+func (h *MonitoringHandler) buildMetricsCacheKey(prefix string, start, end *time.Time) string {
+	timezone := h.getTimezoneFromCache()
+	if start == nil && end == nil {
+		return prefix + ":none:" + timezone
+	}
+	startVal := ""
+	endVal := ""
+	if start != nil {
+		startVal = start.Format(time.RFC3339)
+	}
+	if end != nil {
+		endVal = end.Format(time.RFC3339)
+	}
+	return prefix + ":" + startVal + ":" + endVal + ":" + timezone
+}
+
+func (h *MonitoringHandler) getMetricsCache(key string) (interface{}, bool) {
+	h.metricsCacheMu.RLock()
+	item, ok := h.metricsCache[key]
+	h.metricsCacheMu.RUnlock()
+	if !ok {
+		return nil, false
+	}
+	if time.Now().After(item.expiresAt) {
+		h.metricsCacheMu.Lock()
+		delete(h.metricsCache, key)
+		h.metricsCacheMu.Unlock()
+		return nil, false
+	}
+	return item.data, true
+}
+
+func (h *MonitoringHandler) setMetricsCache(key string, data interface{}) {
+	h.metricsCacheMu.Lock()
+	h.metricsCache[key] = metricsCacheItem{
+		data:      data,
+		expiresAt: time.Now().Add(metricsCacheTTL),
+	}
+	h.metricsCacheMu.Unlock()
+}
+
+func (h *MonitoringHandler) parseDateRange(c *gin.Context, defaultStart, defaultEnd time.Time) (*time.Time, *time.Time, error) {
+	start := defaultStart
+	end := defaultEnd
+
+	if startQuery := c.Query("start_date"); startQuery != "" {
+		parsed, err := time.Parse("2006-01-02", startQuery)
+		if err != nil {
+			return nil, nil, err
+		}
+		start = parsed.UTC()
+	}
+
+	if endQuery := c.Query("end_date"); endQuery != "" {
+		parsed, err := time.Parse("2006-01-02", endQuery)
+		if err != nil {
+			return nil, nil, err
+		}
+		end = parsed.UTC().Add(24 * time.Hour)
+	}
+
+	if start.After(end) {
+		return nil, nil, errors.New("start_date must be before end_date")
+	}
+
+	return &start, &end, nil
 }
 
 func (h *MonitoringHandler) convertMetricsTimezone(metrics interface{}) error {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"ses-monitoring/internal/domain/sesevent"
@@ -313,7 +314,7 @@ func (r *sesEventRepo) GetDeliveryRate(ctx context.Context) (float64, error) {
 	return rate, err
 }
 
-func (r *sesEventRepo) GetDailyMetrics(ctx context.Context) ([]*sesevent.DailyMetrics, error) {
+func (r *sesEventRepo) GetDailyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.DailyMetrics, error) {
 	query := `
 		SELECT 
 			DATE(event_timestamp) as date,
@@ -327,10 +328,25 @@ func (r *sesEventRepo) GetDailyMetrics(ctx context.Context) ([]*sesevent.DailyMe
 			CASE WHEN COUNT(DISTINCT message_id) = 0 THEN 0 ELSE (COUNT(DISTINCT CASE WHEN event_type = 'Bounce' THEN message_id END) * 100.0 / COUNT(DISTINCT message_id)) END as bounce_rate,
 			CASE WHEN COUNT(DISTINCT message_id) = 0 THEN 0 ELSE (COUNT(DISTINCT CASE WHEN event_type = 'Delivery' THEN message_id END) * 100.0 / COUNT(DISTINCT message_id)) END as delivery_rate
 		FROM ses_events
+	`
+	args := []interface{}{}
+	conditions := []string{}
+	if start != nil {
+		args = append(args, *start)
+		conditions = append(conditions, fmt.Sprintf("event_timestamp >= $%d", len(args)))
+	}
+	if end != nil {
+		args = append(args, *end)
+		conditions = append(conditions, fmt.Sprintf("event_timestamp < $%d", len(args)))
+	}
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += `
 		GROUP BY DATE(event_timestamp)
 		ORDER BY DATE(event_timestamp) DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +364,7 @@ func (r *sesEventRepo) GetDailyMetrics(ctx context.Context) ([]*sesevent.DailyMe
 	return metrics, nil
 }
 
-func (r *sesEventRepo) GetMonthlyMetrics(ctx context.Context) ([]*sesevent.MonthlyMetrics, error) {
+func (r *sesEventRepo) GetMonthlyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.MonthlyMetrics, error) {
 	query := `
 		SELECT 
 			TO_CHAR(DATE_TRUNC('month', event_timestamp), 'YYYY-MM') as month,
@@ -362,10 +378,25 @@ func (r *sesEventRepo) GetMonthlyMetrics(ctx context.Context) ([]*sesevent.Month
 			CASE WHEN COUNT(*) = 0 THEN 0 ELSE (SUM(CASE WHEN event_type = 'Bounce' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) END as bounce_rate,
 			CASE WHEN COUNT(*) = 0 THEN 0 ELSE (SUM(CASE WHEN event_type = 'Delivery' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) END as delivery_rate
 		FROM ses_events
+	`
+	args := []interface{}{}
+	conditions := []string{}
+	if start != nil {
+		args = append(args, *start)
+		conditions = append(conditions, fmt.Sprintf("event_timestamp >= $%d", len(args)))
+	}
+	if end != nil {
+		args = append(args, *end)
+		conditions = append(conditions, fmt.Sprintf("event_timestamp < $%d", len(args)))
+	}
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += `
 		GROUP BY DATE_TRUNC('month', event_timestamp)
 		ORDER BY DATE_TRUNC('month', event_timestamp) DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -383,7 +414,7 @@ func (r *sesEventRepo) GetMonthlyMetrics(ctx context.Context) ([]*sesevent.Month
 	return metrics, nil
 }
 
-func (r *sesEventRepo) GetHourlyMetrics(ctx context.Context) ([]*sesevent.HourlyMetrics, error) {
+func (r *sesEventRepo) GetHourlyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.HourlyMetrics, error) {
 	query := `
 		SELECT 
 			TO_CHAR(DATE_TRUNC('hour', event_timestamp), 'YYYY-MM-DD HH24:00') as hour,
@@ -397,10 +428,25 @@ func (r *sesEventRepo) GetHourlyMetrics(ctx context.Context) ([]*sesevent.Hourly
 			CASE WHEN COUNT(*) = 0 THEN 0 ELSE (SUM(CASE WHEN event_type = 'Bounce' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) END as bounce_rate,
 			CASE WHEN COUNT(*) = 0 THEN 0 ELSE (SUM(CASE WHEN event_type = 'Delivery' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) END as delivery_rate
 		FROM ses_events
+	`
+	args := []interface{}{}
+	conditions := []string{}
+	if start != nil {
+		args = append(args, *start)
+		conditions = append(conditions, fmt.Sprintf("event_timestamp >= $%d", len(args)))
+	}
+	if end != nil {
+		args = append(args, *end)
+		conditions = append(conditions, fmt.Sprintf("event_timestamp < $%d", len(args)))
+	}
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += `
 		GROUP BY DATE_TRUNC('hour', event_timestamp)
 		ORDER BY DATE_TRUNC('hour', event_timestamp) DESC
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

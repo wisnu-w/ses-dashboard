@@ -15,9 +15,9 @@ type Repository interface {
 	GetEventsByType(ctx context.Context, eventType string) ([]*Event, error)
 	GetBounceRate(ctx context.Context) (float64, error)
 	GetDeliveryRate(ctx context.Context) (float64, error)
-	GetDailyMetrics(ctx context.Context) ([]*DailyMetrics, error)
-	GetMonthlyMetrics(ctx context.Context) ([]*MonthlyMetrics, error)
-	GetHourlyMetrics(ctx context.Context) ([]*HourlyMetrics, error)
+	GetDailyMetrics(ctx context.Context, start, end *time.Time) ([]*DailyMetrics, error)
+	GetMonthlyMetrics(ctx context.Context, start, end *time.Time) ([]*MonthlyMetrics, error)
+	GetHourlyMetrics(ctx context.Context, start, end *time.Time) ([]*HourlyMetrics, error)
 	GetEventTypeCounts(ctx context.Context) (map[string]int, error)
 	DeleteOldEvents(ctx context.Context, cutoffDate time.Time) (int64, error)
 }

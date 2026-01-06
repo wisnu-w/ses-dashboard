@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"time"
 
 	"ses-monitoring/internal/domain/sesevent"
 )
@@ -53,16 +54,16 @@ func (uc *SESUsecase) GetDeliveryRate(ctx context.Context) (float64, error) {
 	return uc.repo.GetDeliveryRate(ctx)
 }
 
-func (uc *SESUsecase) GetDailyMetrics(ctx context.Context) ([]*sesevent.DailyMetrics, error) {
-	return uc.repo.GetDailyMetrics(ctx)
+func (uc *SESUsecase) GetDailyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.DailyMetrics, error) {
+	return uc.repo.GetDailyMetrics(ctx, start, end)
 }
 
-func (uc *SESUsecase) GetMonthlyMetrics(ctx context.Context) ([]*sesevent.MonthlyMetrics, error) {
-	return uc.repo.GetMonthlyMetrics(ctx)
+func (uc *SESUsecase) GetMonthlyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.MonthlyMetrics, error) {
+	return uc.repo.GetMonthlyMetrics(ctx, start, end)
 }
 
-func (uc *SESUsecase) GetHourlyMetrics(ctx context.Context) ([]*sesevent.HourlyMetrics, error) {
-	return uc.repo.GetHourlyMetrics(ctx)
+func (uc *SESUsecase) GetHourlyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.HourlyMetrics, error) {
+	return uc.repo.GetHourlyMetrics(ctx, start, end)
 }
 
 func (uc *SESUsecase) GetEventTypeCounts(ctx context.Context) (map[string]int, error) {
