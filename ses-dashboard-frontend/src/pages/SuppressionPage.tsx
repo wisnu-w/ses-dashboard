@@ -49,8 +49,18 @@ const SuppressionPage = () => {
   const [newEmail, setNewEmail] = useState('');
   const [newReason, setNewReason] = useState('');
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'error' | ''>('');
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+
+  const showMessage = (text: string, type: 'success' | 'error', timeout = 3000) => {
+    setMessage(text);
+    setMessageType(type);
+    setTimeout(() => {
+      setMessage('');
+      setMessageType('');
+    }, timeout);
+  };
 
   const loadSyncStatus = async () => {
     try {
@@ -111,20 +121,18 @@ const SuppressionPage = () => {
       });
       
       if (response.ok) {
-        setMessage('Email added to suppression list');
+        showMessage('Email added to suppression list', 'success');
         setNewEmail('');
         setNewReason('');
         setShowAddModal(false);
         loadSuppressions();
       } else {
         const error = await response.json();
-        setMessage(error.error || 'Failed to add email');
+        showMessage(error.error || 'Failed to add email', 'error', 5000);
       }
     } catch (error) {
-      setMessage('Failed to add email');
+      showMessage('Failed to add email', 'error', 5000);
     }
-    
-    setTimeout(() => setMessage(''), 3000);
   };
 
   const removeSuppression = async (email: string) => {
@@ -137,17 +145,15 @@ const SuppressionPage = () => {
       });
       
       if (response.ok) {
-        setMessage('Email removed from AWS SES suppression list');
+        showMessage('Email removed from AWS SES suppression list', 'success');
         loadSuppressions();
       } else {
         const error = await response.json();
-        setMessage(error.error || 'Failed to remove email');
+        showMessage(error.error || 'Failed to remove email', 'error', 5000);
       }
     } catch (error) {
-      setMessage('Failed to remove email');
+      showMessage('Failed to remove email', 'error', 5000);
     }
-    
-    setTimeout(() => setMessage(''), 3000);
   };
 
   const checkAWSStatus = async (email: string) => {
@@ -177,19 +183,17 @@ const SuppressionPage = () => {
       });
       
       if (response.ok) {
-        setMessage('Sync triggered. Data will be updated in background.');
+        showMessage('Sync triggered. Data will be updated in background.', 'success');
         loadSyncStatus(); // Refresh status
       } else {
         const error = await response.json();
-        setMessage(error.error || 'Failed to trigger sync');
+        showMessage(error.error || 'Failed to trigger sync', 'error', 5000);
       }
     } catch (error) {
-      setMessage('Failed to trigger sync');
+      showMessage('Failed to trigger sync', 'error', 5000);
     } finally {
       setSyncing(false);
     }
-    
-    setTimeout(() => setMessage(''), 3000);
   };
 
   const bulkAddEmails = async () => {
@@ -211,20 +215,18 @@ const SuppressionPage = () => {
       
       if (response.ok) {
         const result = await response.json();
-        setMessage(`Bulk add completed: ${result.success_count} success, ${result.failed_count} failed`);
+        showMessage(`Bulk add completed: ${result.success_count} success, ${result.failed_count} failed`, 'success', 5000);
         setBulkEmails('');
         setBulkReason('');
         setShowBulkModal(false);
         loadSuppressions();
       } else {
         const error = await response.json();
-        setMessage(error.error || 'Failed to bulk add emails');
+        showMessage(error.error || 'Failed to bulk add emails', 'error', 5000);
       }
     } catch (error) {
-      setMessage('Failed to bulk add emails');
+      showMessage('Failed to bulk add emails', 'error', 5000);
     }
-    
-    setTimeout(() => setMessage(''), 5000);
   };
 
   const bulkRemoveEmails = async () => {
@@ -248,9 +250,9 @@ const SuppressionPage = () => {
       if (response.ok) {
         const result = await response.json();
         if (result.failed_count > 0) {
-          setMessage(`Bulk remove completed: ${result.success_count} success, ${result.failed_count} failed. Failed emails: ${result.failed_emails.join(', ')}`);
+          showMessage(`Bulk remove completed: ${result.success_count} success, ${result.failed_count} failed. Failed emails: ${result.failed_emails.join(', ')}`, 'error', 5000);
         } else {
-          setMessage(`Bulk remove completed: ${result.success_count} emails removed successfully`);
+          showMessage(`Bulk remove completed: ${result.success_count} emails removed successfully`, 'success', 5000);
         }
         setSelectedEmails([]);
         setBulkEmails('');
@@ -258,13 +260,11 @@ const SuppressionPage = () => {
         loadSuppressions();
       } else {
         const error = await response.json();
-        setMessage(error.error || 'Failed to bulk remove emails');
+        showMessage(error.error || 'Failed to bulk remove emails', 'error', 5000);
       }
     } catch (error) {
-      setMessage('Failed to bulk remove emails');
+      showMessage('Failed to bulk remove emails', 'error', 5000);
     }
-    
-    setTimeout(() => setMessage(''), 5000);
   };
 
   const toggleEmailSelection = (email: string) => {
@@ -372,7 +372,7 @@ const SuppressionPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Suppression List</h1>
             <p className="text-gray-600 mt-1">Manage email suppression list</p>
@@ -420,7 +420,9 @@ const SuppressionPage = () => {
         </div>
 
         {message && (
-          <div className="p-4 rounded-lg bg-blue-50 text-blue-700">
+          <div className={`p-4 rounded-lg ${
+            messageType === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          }`}>
             {message}
           </div>
         )}
@@ -466,8 +468,8 @@ const SuppressionPage = () => {
         {/* Suppression List */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="min-w-[1100px] w-full">
+              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <input
@@ -487,9 +489,31 @@ const SuppressionPage = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">Loading...</td>
-                  </tr>
+                  [...Array(6)].map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-6 py-4">
+                        <div className="h-4 w-4 bg-gray-200 rounded" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-40" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-20" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-48" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-24" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-24" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-200 rounded w-16" />
+                      </td>
+                    </tr>
+                  ))
                 ) : suppressions.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">No suppressed emails found</td>

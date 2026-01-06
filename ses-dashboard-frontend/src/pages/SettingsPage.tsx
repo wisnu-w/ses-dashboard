@@ -34,13 +34,19 @@ const SettingsPage = () => {
   const [timezoneSettings, setTimezoneSettings] = useState<TimezoneSettings>({
     timezone: 'Asia/Jakarta'
   });
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  const loadSettings = async () => {
+  const setTimedMessage = (text: string, type: 'success' | 'error' | 'info', timeout = 3000) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), timeout);
+  };
+
+  const loadSettings = async (showLoading = false) => {
     try {
+      if (showLoading) setInitialLoading(true);
       // Load AWS settings
       const awsResponse = await fetch('/api/settings/aws', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -58,7 +64,6 @@ const SettingsPage = () => {
       
       if (retentionResponse.ok) {
         const retentionData = await retentionResponse.json();
-        console.log('Retention response:', retentionData); // Debug log
         setRetentionSettings(retentionData);
       } else {
         console.error('Retention response error:', retentionResponse.status);
@@ -75,6 +80,11 @@ const SettingsPage = () => {
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
+      if (showLoading) {
+        setTimedMessage('Failed to load settings', 'error', 5000);
+      }
+    } finally {
+      if (showLoading) setInitialLoading(false);
     }
   };
 
@@ -95,11 +105,9 @@ const SettingsPage = () => {
         throw new Error(errorData.error || 'Failed to save retention settings');
       }
       
-      setMessage('Retention settings saved successfully');
-      setTimeout(() => setMessage(''), 3000);
+      setTimedMessage('Retention settings saved successfully', 'success');
     } catch (error: any) {
-      setMessage(error.message || 'Failed to save retention settings');
-      setTimeout(() => setMessage(''), 5000);
+      setTimedMessage(error.message || 'Failed to save retention settings', 'error', 5000);
     } finally {
       setLoading(false);
     }
@@ -122,11 +130,9 @@ const SettingsPage = () => {
         throw new Error(errorData.error || 'Failed to save timezone settings');
       }
       
-      setMessage('Timezone settings saved successfully');
-      setTimeout(() => setMessage(''), 3000);
+      setTimedMessage('Timezone settings saved successfully', 'success');
     } catch (error: any) {
-      setMessage(error.message || 'Failed to save timezone settings');
-      setTimeout(() => setMessage(''), 5000);
+      setTimedMessage(error.message || 'Failed to save timezone settings', 'error', 5000);
     } finally {
       setLoading(false);
     }
@@ -149,11 +155,9 @@ const SettingsPage = () => {
         throw new Error(errorData.error || 'Failed to save settings');
       }
       
-      setMessage('Settings saved successfully');
-      setTimeout(() => setMessage(''), 3000);
+      setTimedMessage('Settings saved successfully', 'success');
     } catch (error: any) {
-      setMessage(error.message || 'Failed to save settings');
-      setTimeout(() => setMessage(''), 5000);
+      setTimedMessage(error.message || 'Failed to save settings', 'error', 5000);
     } finally {
       setLoading(false);
     }
@@ -172,32 +176,43 @@ const SettingsPage = () => {
       });
       
       if (response.ok) {
-        setTestResult('success');
-        setMessage('AWS connection successful');
+        setTimedMessage('AWS connection successful', 'success', 5000);
       } else {
         const errorData = await response.json();
-        setTestResult('error');
-        setMessage(errorData.error || 'AWS connection failed');
+        setTimedMessage(errorData.error || 'AWS connection failed', 'error', 5000);
       }
     } catch (error: any) {
-      setTestResult('error');
-      setMessage(error.message || 'Connection test failed');
+      setTimedMessage(error.message || 'Connection test failed', 'error', 5000);
     } finally {
       setTesting(false);
-      setTimeout(() => {
-        setTestResult(null);
-        setMessage('');
-      }, 5000);
     }
   };
 
   useEffect(() => {
-    loadSettings();
+    loadSettings(true);
     
     // Auto refresh settings setiap 30 detik
     const interval = setInterval(loadSettings, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  if (initialLoading) {
+    return (
+      <Layout title="Settings">
+        <div className="animate-pulse space-y-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-10 bg-gray-200 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Settings">
@@ -210,10 +225,16 @@ const SettingsPage = () => {
         </div>
 
         {message && (
-          <div className={`p-4 rounded-lg ${testResult === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          <div className={`p-4 rounded-lg ${
+            message.type === 'success'
+              ? 'bg-green-50 text-green-700'
+              : message.type === 'info'
+              ? 'bg-blue-50 text-blue-700'
+              : 'bg-red-50 text-red-700'
+          }`}>
             <div className="flex items-center">
-              {testResult === 'success' ? <CheckCircle className="w-5 h-5 mr-2" /> : <AlertCircle className="w-5 h-5 mr-2" />}
-              {message}
+              {message.type === 'success' ? <CheckCircle className="w-5 h-5 mr-2" /> : <AlertCircle className="w-5 h-5 mr-2" />}
+              {message.text}
             </div>
           </div>
         )}

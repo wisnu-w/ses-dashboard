@@ -188,10 +188,17 @@ const EventsPage = () => {
           </div>
         )}
 
-        {eventsData && eventsData.events && eventsData.events.length > 0 && (
+        {(loading || (eventsData && eventsData.events && eventsData.events.length > 0)) && (
           <EventsTable
-            events={eventsData.events}
-            pagination={eventsData.pagination}
+            events={eventsData?.events ?? []}
+            pagination={eventsData?.pagination ?? {
+              page: currentPage,
+              limit: pageSize,
+              total: 0,
+              totalPages: 1,
+              hasNext: false,
+              hasPrev: false,
+            }}
             onPageChange={handlePageChange}
             loading={loading}
           />
@@ -215,15 +222,6 @@ const EventsPage = () => {
                   Clear Filters
                 </button>
               )}
-            </div>
-          </div>
-        )}
-
-        {loading && !eventsData && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading events...</p>
             </div>
           </div>
         )}

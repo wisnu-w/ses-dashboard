@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Users as UsersIcon, Key, UserX, UserCheck, Trash2, Settings } from 'lucide-react';
+import { Plus, Users as UsersIcon, Key, UserX, UserCheck, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { userService } from '../services/api';
 import type { User, CreateUserRequest } from '../types/api';
@@ -83,7 +83,7 @@ const UsersPage = () => {
   return (
     <Layout title="Users">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
             <p className="text-gray-600 mt-1">Manage system users and their roles</p>
@@ -165,7 +165,7 @@ const UsersPage = () => {
         )}
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <UsersIcon className="w-5 h-5 mr-2" />
@@ -174,14 +174,23 @@ const UsersPage = () => {
           </div>
 
           {loading ? (
-            <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600 mt-2">Loading users...</p>
+            <div className="p-6">
+              <div className="animate-pulse space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-4 bg-gray-200 rounded"></div>
+                ))}
+              </div>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="p-10 text-center">
+              <UsersIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-700 font-medium">No users found</p>
+              <p className="text-sm text-gray-500 mt-1">Create your first user to get started.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-[720px] w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50 sticky top-0 z-10">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Username
