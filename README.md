@@ -56,10 +56,21 @@ A comprehensive monitoring dashboard for AWS SES (Simple Email Service) events w
 ### 1. Clone the Repository
 ```bash
 git clone <repository-url>
-cd ses-dashboard-monitoring
+cd ses-dashboard
 ```
 
-### 2. Run Installation Script
+### 2. Prepare Environment
+The stack reads config from `ses-dashboard-monitoring/config/config.yaml` and Docker Compose reads `.env`.
+
+Generate `.env` from `config.yaml`:
+```bash
+chmod +x generate-env.sh
+./generate-env.sh
+```
+
+Optional: edit `.env` to override values for Docker Compose.
+
+### 3. Run Installation Script
 ```bash
 chmod +x install.sh
 ./install.sh
@@ -72,15 +83,16 @@ The installation script will:
 - ✅ Run database migrations automatically
 - ✅ Display service URLs and credentials
 
-### 3. Access the Application
+### 4. Access the Application
 
 | Service | URL | Description |
 |---------|-----|-------------|
 | **Application** | http://localhost | Complete SES Dashboard |
-| **API Documentation** | http://localhost:8080/swagger/index.html | Swagger UI |
+| **API Documentation** | http://localhost/swagger/index.html | Swagger UI (proxied) |
+| **API Documentation (direct)** | http://localhost:8080/swagger/index.html | Swagger UI (backend) |
 | **Database** | localhost:5432 | PostgreSQL (admin access) |
 
-### 4. Default Credentials
+### 5. Default Credentials
 ```
 Username: admin
 Password: password
@@ -116,7 +128,7 @@ Password: password
 ## 📁 Project Structure
 
 ```
-ses-dashboard-monitoring/
+ses-dashboard/
 ├── ses-dashboard-monitoring/          # Backend (Go)
 │   ├── cmd/api/                      # Application entry point
 │   │   └── main.go                   # Main application file
@@ -172,14 +184,32 @@ ses-dashboard-monitoring/
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DB_HOST` | Database host | `postgres` |
+| `APP_NAME` | App name | `ses-monitoring` |
+| `APP_ENV` | Environment name | `local` |
+| `APP_PORT` | Backend server port | `8080` |
+| `ENABLE_SWAGGER` | Toggle Swagger | `true` |
+| `JWT_SECRET` | JWT signing secret | `your-super-secret-jwt-key` |
+| `DB_HOST` | Database host | `localhost` |
 | `DB_PORT` | Database port | `5432` |
 | `DB_USER` | Database username | `ses_user` |
-| `DB_PASSWORD` | Database password | `ses_password` |
-| `DB_NAME` | Database name | `ses_monitoring` |
-| `JWT_SECRET` | JWT signing secret | `your-super-secret-jwt-key` |
-| `PORT` | Backend server port | `8080` |
+| `DB_PASSWORD` | Database password | `password123!` |
+| `DB_NAME` | Database name | `ses_dashboard` |
+| `DB_SSLMODE` | Database SSL mode | `disable` |
+| `AWS_REGION` | AWS region | `ap-southeast-1` |
+| `AWS_ACCESS_KEY` | AWS access key | (empty) |
+| `AWS_SECRET_KEY` | AWS secret key | (empty) |
+| `SNS_TOPIC_ARN` | Allowlist SNS topic for `/sns/ses` | (empty = allow any) |
 | `BACKEND_URL` | Backend URL for frontend proxy | `http://backend:8080` |
+| `VITE_API_URL` | Frontend dev API base URL | `http://localhost:8080` |
+
+### Config Files
+- `ses-dashboard-monitoring/config/config.yaml` is the primary config file.
+- `.env` is used by Docker Compose. Generate it via `./generate-env.sh`.
+  - Add `SNS_TOPIC_ARN` manually to `.env` if you want to restrict webhook intake.
+
+Environment variables take precedence over YAML values.
+
+When running via Docker Compose, the backend container overrides `DB_HOST` to `postgres` so it can reach the database service.
 
 ### Database Schema
 
@@ -208,6 +238,8 @@ To receive SES events via SNS:
 3. Configure SES to publish events to the SNS topic
 4. Events will be automatically processed and stored
 
+Optional hardening: set `SNS_TOPIC_ARN` so the API only accepts messages from that topic.
+
 ## 🔧 Development
 
 > **Note:** For production deployment, simply use `./install.sh`. The sections below are for development purposes only.
@@ -234,6 +266,8 @@ make migrate-version
 ```bash
 cd ses-dashboard-monitoring
 go mod download
+export APP_PORT=8080
+export JWT_SECRET=your-secret
 go run cmd/api/main.go
 ```
 
@@ -241,6 +275,7 @@ go run cmd/api/main.go
 ```bash
 cd ses-dashboard-frontend
 npm install
+export VITE_API_URL=http://localhost:8080
 npm run dev
 ```
 
@@ -290,6 +325,15 @@ http://localhost/swagger/index.html
 | `GET` | `/api/metrics/daily` | Get daily analytics |
 | `GET` | `/api/metrics/monthly` | Get monthly analytics |
 | `GET` | `/api/metrics/hourly` | Get hourly analytics |
+
+All metrics endpoints accept optional query parameters:
+- `start_date=YYYY-MM-DD`
+- `end_date=YYYY-MM-DD`
+
+Default ranges:
+- Daily: last 30 days
+- Hourly: last 48 hours
+- Monthly: last 12 months
 
 #### Suppression Management
 | Method | Endpoint | Description |
