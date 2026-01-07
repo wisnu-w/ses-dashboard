@@ -52,6 +52,7 @@ const SuppressionPage = () => {
   const [messageType, setMessageType] = useState<'success' | 'error' | ''>('');
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [syncIntervalMinutes, setSyncIntervalMinutes] = useState<number | null>(null);
 
   const showMessage = (text: string, type: 'success' | 'error', timeout = 3000) => {
     setMessage(text);
@@ -71,6 +72,16 @@ const SuppressionPage = () => {
       if (response.ok) {
         const data = await response.json();
         setSyncStatus(data);
+      }
+
+      const settingsResponse = await fetch('/api/settings/aws', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        if (typeof settingsData.sync_interval === 'number') {
+          setSyncIntervalMinutes(settingsData.sync_interval);
+        }
       }
     } catch (error) {
       console.error('Failed to load sync status:', error);
@@ -298,6 +309,11 @@ const SuppressionPage = () => {
 
   // Check if AWS is disabled
   const isAWSDisabled = syncStatus ? !syncStatus.aws_enabled : false;
+  const nextSyncLabel = isAWSDisabled
+    ? 'Disabled'
+    : syncIntervalMinutes
+    ? `${syncIntervalMinutes} minute${syncIntervalMinutes === 1 ? '' : 's'}`
+    : (syncStatus?.next_sync_in || '—');
 
   return (
     <Layout title="Suppression List">
@@ -364,7 +380,7 @@ const SuppressionPage = () => {
               <RefreshCw className="w-4 h-4 text-gray-400" />
               <div>
                 <p className="text-sm font-medium text-gray-900">
-                  {syncStatus?.next_sync_in || '5 minutes'}
+                  {nextSyncLabel}
                 </p>
                 <p className="text-xs text-gray-500">Next Auto Sync</p>
               </div>
