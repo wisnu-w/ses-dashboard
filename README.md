@@ -77,7 +77,7 @@ The installation script will:
 | Service | URL | Description |
 |---------|-----|-------------|
 | **Application** | http://localhost | Complete SES Dashboard |
-| **API Documentation** | http://localhost:8080/swagger/index.html | Swagger UI |
+| **API Documentation** | http://localhost/swagger/index.html | Swagger UI |
 | **Database** | localhost:5432 | PostgreSQL (admin access) |
 
 ### 4. Default Credentials
