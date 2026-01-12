@@ -79,6 +79,7 @@ The installation script will:
 | **Application** | http://localhost | Complete SES Dashboard |
 | **API Documentation** | http://localhost/swagger/index.html | Swagger UI |
 | **Database** | localhost:5432 | PostgreSQL (admin access) |
+| **SNS SES Webhook** | http://localhost/sns/ses | SES events webhook (POST from SNS) |
 
 ### 4. Default Credentials
 ```
@@ -206,7 +207,17 @@ To receive SES events via SNS:
 1. Create an SNS topic in AWS
 2. Subscribe your endpoint: `http://your-domain/sns/ses`
 3. Configure SES to publish events to the SNS topic
-4. Events will be automatically processed and stored
+4. Confirm the subscription (HTTPS confirmation) so SNS can deliver messages
+5. Events will be automatically processed and stored
+
+#### AWS Console Steps (SNS)
+1. Open **AWS SNS Console → Topics → Create topic** (type **Standard**).
+2. After creating the topic, copy the **Topic ARN**.
+3. Go to **Subscriptions → Create subscription**:
+   - Protocol: **HTTPS**
+   - Endpoint: `https://your-domain/sns/ses` (use your public domain; local `http://localhost` will not work from AWS)
+4. Confirm the subscription (AWS sends a confirmation request to your endpoint).
+5. In **Amazon SES → Configuration → Event destinations**, add this SNS topic as the destination for SES event types you need.
 
 ## 🔧 Development
 
