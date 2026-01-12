@@ -59,10 +59,10 @@ git clone <repository-url>
 cd ses-dashboard
 ```
 
-### 2. Prepare Environment
-The stack reads config from `ses-dashboard-monitoring/config/config.yaml` and Docker Compose reads `.env`.
+### 2. Prepare Environment (Optional)
+The stack reads config from `ses-dashboard-monitoring/config/config.yaml` and Docker Compose reads `.env` if present.
 
-Generate `.env` from `config.yaml`:
+If you want to generate a `.env` from `config.yaml`:
 ```bash
 chmod +x generate-env.sh
 ./generate-env.sh
@@ -91,6 +91,7 @@ The installation script will:
 | **API Documentation** | http://localhost/swagger/index.html | Swagger UI (proxied) |
 | **API Documentation (direct)** | http://localhost:8080/swagger/index.html | Swagger UI (backend) |
 | **Database** | localhost:5432 | PostgreSQL (admin access) |
+| **SNS SES Webhook** | http://localhost/sns/ses | SES events webhook (POST from SNS) |
 
 ### 5. Default Credentials
 ```
@@ -204,7 +205,7 @@ ses-dashboard/
 
 ### Config Files
 - `ses-dashboard-monitoring/config/config.yaml` is the primary config file.
-- `.env` is used by Docker Compose. Generate it via `./generate-env.sh`.
+- `.env` is used by Docker Compose if present. You can generate it via `./generate-env.sh` or manage it manually.
   - Add `SNS_TOPIC_ARN` manually to `.env` if you want to restrict webhook intake.
 
 Environment variables take precedence over YAML values.
@@ -236,7 +237,17 @@ To receive SES events via SNS:
 1. Create an SNS topic in AWS
 2. Subscribe your endpoint: `http://your-domain/sns/ses`
 3. Configure SES to publish events to the SNS topic
-4. Events will be automatically processed and stored
+4. Confirm the subscription (HTTPS confirmation) so SNS can deliver messages
+5. Events will be automatically processed and stored
+
+#### AWS Console Steps (SNS)
+1. Open **AWS SNS Console → Topics → Create topic** (type **Standard**).
+2. After creating the topic, copy the **Topic ARN**.
+3. Go to **Subscriptions → Create subscription**:
+   - Protocol: **HTTPS**
+   - Endpoint: `https://your-domain/sns/ses` (use your public domain; local `http://localhost` will not work from AWS)
+4. Confirm the subscription (AWS sends a confirmation request to your endpoint).
+5. In **Amazon SES → Configuration → Event destinations**, add this SNS topic as the destination for SES event types you need.
 
 Optional hardening: set `SNS_TOPIC_ARN` so the API only accepts messages from that topic.
 
