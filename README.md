@@ -59,7 +59,13 @@ git clone <repository-url>
 cd ses-dashboard-monitoring
 ```
 
-### 2. Run Installation Script
+### 2. Clone the Repository
+```bash
+cd ses-dashboard-monitoring
+cp .env.example .env
+```
+
+### 3. Run Installation Script
 ```bash
 chmod +x install.sh
 ./install.sh
@@ -89,6 +95,48 @@ Password: password
 **⚠️ IMPORTANT: Change the default password after first login for security!**
 
 **That's it!** The `install.sh` script handles everything - from building Docker images to database migrations. No manual steps required.
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_HOST` | Database host | `postgres` |
+| `DB_PORT` | Database port | `5432` |
+| `DB_USER` | Database username | `ses_user` |
+| `DB_PASSWORD` | Database password | `ses_password` |
+| `DB_NAME` | Database name | `ses_monitoring` |
+| `JWT_SECRET` | JWT signing secret | `your-super-secret-jwt-key` |
+| `PORT` | Backend server port | `8080` |
+| `BACKEND_URL` | Backend URL for frontend proxy | `http://backend:8080` |
+
+### Database Schema
+
+The application uses 4 main tables:
+
+1. **users** - User accounts with role-based access
+2. **ses_events** - SES event logs with full event data
+3. **app_settings** - Configurable application settings
+4. **suppressions** - Email suppression list management
+
+### AWS SES Configuration
+
+Configure AWS SES settings through the admin panel:
+
+1. Navigate to **Admin → Settings**
+2. Configure AWS credentials and region
+3. Test the connection
+4. Enable AWS integration
+
+### SNS Webhook Setup
+
+To receive SES events via SNS:
+
+1. Create an SNS topic in AWS
+2. Subscribe your endpoint: `http://your-domain/sns/ses`
+3. Configure SES to publish events to the SNS topic
+4. Events will be automatically processed and stored
 
 ## 🏗️ Architecture
 
@@ -165,48 +213,6 @@ ses-dashboard-monitoring/
 ├── install.sh                       # Installation script
 └── README.md                        # This file
 ```
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DB_HOST` | Database host | `postgres` |
-| `DB_PORT` | Database port | `5432` |
-| `DB_USER` | Database username | `ses_user` |
-| `DB_PASSWORD` | Database password | `ses_password` |
-| `DB_NAME` | Database name | `ses_monitoring` |
-| `JWT_SECRET` | JWT signing secret | `your-super-secret-jwt-key` |
-| `PORT` | Backend server port | `8080` |
-| `BACKEND_URL` | Backend URL for frontend proxy | `http://backend:8080` |
-
-### Database Schema
-
-The application uses 4 main tables:
-
-1. **users** - User accounts with role-based access
-2. **ses_events** - SES event logs with full event data
-3. **app_settings** - Configurable application settings
-4. **suppressions** - Email suppression list management
-
-### AWS SES Configuration
-
-Configure AWS SES settings through the admin panel:
-
-1. Navigate to **Admin → Settings**
-2. Configure AWS credentials and region
-3. Test the connection
-4. Enable AWS integration
-
-### SNS Webhook Setup
-
-To receive SES events via SNS:
-
-1. Create an SNS topic in AWS
-2. Subscribe your endpoint: `http://your-domain/sns/ses`
-3. Configure SES to publish events to the SNS topic
-4. Events will be automatically processed and stored
 
 ## 🔧 Development
 
