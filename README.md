@@ -111,6 +111,15 @@ Password: password
 | `PORT` | Backend server port | `8080` |
 | `BACKEND_URL` | Backend URL for frontend proxy | `http://backend:8080` |
 
+### SNS Webhook Setup
+
+To receive SES events via SNS:
+
+1. Create an SNS topic in AWS
+2. Subscribe your endpoint: `http://your-domain/sns/ses`
+3. Configure SES to publish events to the SNS topic
+4. Events will be automatically processed and stored
+
 ### Database Schema
 
 The application uses 4 main tables:
@@ -128,15 +137,6 @@ Configure AWS SES settings through the admin panel:
 2. Configure AWS credentials and region
 3. Test the connection
 4. Enable AWS integration
-
-### SNS Webhook Setup
-
-To receive SES events via SNS:
-
-1. Create an SNS topic in AWS
-2. Subscribe your endpoint: `http://your-domain/sns/ses`
-3. Configure SES to publish events to the SNS topic
-4. Events will be automatically processed and stored
 
 ## 🏗️ Architecture
 

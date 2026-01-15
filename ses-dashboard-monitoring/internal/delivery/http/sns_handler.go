@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -72,14 +71,10 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 	if typ, ok := payload["Type"].(string); ok {
 		if typ == "SubscriptionConfirmation" {
 			if subscribeURL, ok := payload["SubscribeURL"].(string); ok {
-				log.Printf("SNS Subscription Confirmation received. Auto-confirming...")
-				if err := confirmSubscription(subscribeURL); err != nil {
-					log.Printf("SNS auto-confirm failed: %v", err)
-					c.JSON(http.StatusBadRequest, gin.H{"error": "subscription confirmation failed"})
-					return
-				}
-				log.Printf("SNS subscription confirmed")
-				c.JSON(http.StatusOK, gin.H{"status": "subscription confirmed"})
+				log.Printf("SNS Subscription Confirmation received. SubscribeURL: %s", subscribeURL)
+				// Optionally, you can automatically confirm by making a GET request to subscribeURL
+				// But for now, just log it
+				c.JSON(http.StatusOK, gin.H{"status": "subscription confirmation logged"})
 				return
 			}
 		}
@@ -163,21 +158,4 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func confirmSubscription(subscribeURL string) error {
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, subscribeURL, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("unexpected status: %s", resp.Status)
-	}
-	return nil
 }
