@@ -33,7 +33,7 @@ func (h *SettingsHandler) GetAWSSettings(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Don't return secret key in response
 	config.SecretKey = ""
 	if config.AccessKey != "" && len(config.AccessKey) > 4 {
@@ -41,7 +41,7 @@ func (h *SettingsHandler) GetAWSSettings(c *gin.Context) {
 	} else if config.AccessKey != "" {
 		config.AccessKey = "****"
 	}
-	
+
 	c.JSON(http.StatusOK, config)
 }
 
@@ -63,14 +63,14 @@ func (h *SettingsHandler) UpdateAWSSettings(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Get user ID from JWT token - required for audit trail
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User authentication required"})
 		return
 	}
-	
+
 	// Handle both int and float64 from JWT claims
 	var userIDInt int
 	switch v := userID.(type) {
@@ -82,27 +82,27 @@ func (h *SettingsHandler) UpdateAWSSettings(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
 		return
 	}
-	
+
 	if userIDInt == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
 		return
 	}
-	
+
 	// Save settings with proper user tracking
 	ctx := c.Request.Context()
-	
+
 	err := h.settingsRepo.Set(ctx, "aws_enabled", strconv.FormatBool(config.Enabled), userIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	err = h.settingsRepo.Set(ctx, "aws_region", config.Region, userIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	if config.AccessKey != "" {
 		err = h.settingsRepo.Set(ctx, "aws_access_key", config.AccessKey, userIDInt)
 		if err != nil {
@@ -110,7 +110,7 @@ func (h *SettingsHandler) UpdateAWSSettings(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	if config.SecretKey != "" {
 		err = h.settingsRepo.Set(ctx, "aws_secret_key", config.SecretKey, userIDInt)
 		if err != nil {
@@ -118,13 +118,13 @@ func (h *SettingsHandler) UpdateAWSSettings(c *gin.Context) {
 			return
 		}
 	}
-	
+
 	err = h.settingsRepo.Set(ctx, "aws_sync_interval", strconv.Itoa(config.SyncInterval), userIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
 }
 
@@ -146,14 +146,14 @@ func (h *SettingsHandler) TestAWSConnection(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	sesClient := aws.NewSESClient(&config)
 	err := sesClient.TestConnection(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "AWS connection successful"})
 }
 
@@ -173,32 +173,32 @@ type RetentionSettings struct {
 func (h *SettingsHandler) GetRetentionSettings(c *gin.Context) {
 	retentionDaysSetting, err1 := h.settingsRepo.Get(c.Request.Context(), "retention_days")
 	retentionEnabledSetting, err2 := h.settingsRepo.Get(c.Request.Context(), "retention_enabled")
-	
+
 	// Debug logging
 	if err1 != nil {
 		c.Header("X-Debug-Days-Error", err1.Error())
 	} else {
 		c.Header("X-Debug-Days-Value", retentionDaysSetting.Value)
 	}
-	
+
 	if err2 != nil {
 		c.Header("X-Debug-Enabled-Error", err2.Error())
 	} else {
 		c.Header("X-Debug-Enabled-Value", retentionEnabledSetting.Value)
 	}
-	
+
 	var days int
 	if err1 == nil {
 		if parsed, err := strconv.Atoi(retentionDaysSetting.Value); err == nil {
 			days = parsed
 		}
 	}
-	
+
 	var enabled bool
 	if err2 == nil {
 		enabled = retentionEnabledSetting.Value == "true"
 	}
-	
+
 	c.JSON(http.StatusOK, RetentionSettings{
 		RetentionDays: days,
 		Enabled:       enabled,
@@ -221,13 +221,13 @@ func (h *SettingsHandler) UpdateRetentionSettings(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User authentication required"})
 		return
 	}
-	
+
 	var userIDInt int
 	switch v := userID.(type) {
 	case int:
@@ -238,21 +238,21 @@ func (h *SettingsHandler) UpdateRetentionSettings(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
 		return
 	}
-	
+
 	ctx := c.Request.Context()
-	
+
 	err := h.settingsRepo.Set(ctx, "retention_days", strconv.Itoa(settings.RetentionDays), userIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	err = h.settingsRepo.Set(ctx, "retention_enabled", strconv.FormatBool(settings.Enabled), userIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "Retention settings updated successfully"})
 }
 
@@ -289,13 +289,13 @@ func (h *SettingsHandler) UpdateTimezoneSettings(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User authentication required"})
 		return
 	}
-	
+
 	var userIDInt int
 	switch v := userID.(type) {
 	case int:
@@ -306,23 +306,24 @@ func (h *SettingsHandler) UpdateTimezoneSettings(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
 		return
 	}
-	
+
 	ctx := c.Request.Context()
 	err := h.settingsRepo.Set(ctx, "timezone", config.Timezone, userIDInt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Refresh monitoring handler timezone cache
 	if monitoringHandler, ok := c.Get("monitoring_handler"); ok {
 		if mh, ok := monitoringHandler.(*MonitoringHandler); ok {
 			mh.RefreshTimezone()
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "Timezone settings updated successfully"})
 }
+
 // @Summary Check email suppression status
 // @Description Check if email is suppressed in AWS SES
 // @Tags suppression
@@ -339,53 +340,24 @@ func (h *SettingsHandler) CheckEmailSuppression(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
 		return
 	}
-	
+
 	config, err := h.settingsRepo.GetAWSConfig(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
+	if !config.Enabled {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "AWS integration is disabled"})
+		return
+	}
+
 	sesClient := aws.NewSESClient(config)
 	status, err := sesClient.CheckSuppressionStatus(c.Request.Context(), email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
-	c.JSON(http.StatusOK, status)
-}
 
-// RemoveEmailSuppression godoc
-// @Summary Remove email from suppression
-// @Description Remove email from AWS SES suppression list
-// @Tags suppression
-// @Produce json
-// @Security BearerAuth
-// @Param email path string true "Email address"
-// @Success 200 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /api/suppression/{email} [delete]
-func (h *SettingsHandler) RemoveEmailSuppression(c *gin.Context) {
-	email := c.Param("email")
-	if email == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
-		return
-	}
-	
-	config, err := h.settingsRepo.GetAWSConfig(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	
-	sesClient := aws.NewSESClient(config)
-	err = sesClient.RemoveFromSuppression(c.Request.Context(), email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	
-	c.JSON(http.StatusOK, gin.H{"message": "Email removed from suppression list"})
+	c.JSON(http.StatusOK, status)
 }

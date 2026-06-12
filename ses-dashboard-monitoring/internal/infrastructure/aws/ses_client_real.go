@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"ses-monitoring/internal/domain/settings"
@@ -18,9 +19,9 @@ import (
 )
 
 type SESClient struct {
-	config    *settings.AWSConfig
-	lastCall  time.Time
-	minDelay  time.Duration
+	config   *settings.AWSConfig
+	lastCall time.Time
+	minDelay time.Duration
 }
 
 func NewSESClient(config *settings.AWSConfig) *SESClient {
@@ -51,20 +52,20 @@ func (c *SESClient) CheckSuppressionStatus(ctx context.Context, email string) (*
 	if !c.config.Enabled {
 		return nil, fmt.Errorf("AWS integration is disabled")
 	}
-	
+
 	c.rateLimitedCall()
-	
+
 	cfg, err := c.getAWSConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	sesClient := sesv2.NewFromConfig(cfg)
-	
+
 	result, err := sesClient.GetSuppressedDestination(ctx, &sesv2.GetSuppressedDestinationInput{
 		EmailAddress: aws.String(email),
 	})
-	
+
 	if err != nil {
 		// If not found, email is not suppressed
 		return &SuppressionStatus{
@@ -74,7 +75,7 @@ func (c *SESClient) CheckSuppressionStatus(ctx context.Context, email string) (*
 			LastUpdate: "",
 		}, nil
 	}
-	
+
 	return &SuppressionStatus{
 		Email:      email,
 		Suppressed: true,
@@ -88,27 +89,27 @@ func (c *SESClient) RemoveFromSuppression(ctx context.Context, email string) err
 	if !c.config.Enabled {
 		return fmt.Errorf("AWS integration is disabled")
 	}
-	
+
 	c.rateLimitedCall()
-	
+
 	cfg, err := c.getAWSConfig(ctx)
 	if err != nil {
 		log.Printf("AWS config error for %s: %v", email, err)
 		return err
 	}
-	
+
 	sesClient := sesv2.NewFromConfig(cfg)
-	
+
 	log.Printf("Attempting to remove %s from AWS SES suppression list", email)
 	_, err = sesClient.DeleteSuppressedDestination(ctx, &sesv2.DeleteSuppressedDestinationInput{
 		EmailAddress: aws.String(email),
 	})
-	
+
 	if err != nil {
 		log.Printf("AWS API error removing %s: %v", email, err)
 		return fmt.Errorf("failed to remove %s from AWS SES: %w", email, err)
 	}
-	
+
 	log.Printf("Successfully removed %s from AWS SES suppression list", email)
 	return nil
 }
@@ -118,21 +119,33 @@ func (c *SESClient) AddToSuppression(ctx context.Context, email, reason string) 
 	if !c.config.Enabled {
 		return fmt.Errorf("AWS integration is disabled")
 	}
-	
+
 	c.rateLimitedCall()
-	
+
 	cfg, err := c.getAWSConfig(ctx)
 	if err != nil {
 		return err
 	}
-	
+
 	sesClient := sesv2.NewFromConfig(cfg)
-	
+
+	// Map reason string to AWS SES suppression list reason type
+	var suppressionReason types.SuppressionListReason
+	switch strings.ToLower(reason) {
+	case "bounce":
+		suppressionReason = types.SuppressionListReasonBounce
+	case "complaint":
+		suppressionReason = types.SuppressionListReasonComplaint
+	default:
+		// Default to complaint if reason is not recognized
+		suppressionReason = types.SuppressionListReasonComplaint
+	}
+
 	_, err = sesClient.PutSuppressedDestination(ctx, &sesv2.PutSuppressedDestinationInput{
 		EmailAddress: aws.String(email),
-		Reason:       types.SuppressionListReasonComplaint, // Default to complaint
+		Reason:       suppressionReason,
 	})
-	
+
 	return err
 }
 
@@ -141,20 +154,20 @@ func (c *SESClient) TestConnection(ctx context.Context) error {
 	if !c.config.Enabled {
 		return fmt.Errorf("AWS integration is disabled")
 	}
-	
+
 	if c.config.AccessKey == "" || c.config.SecretKey == "" {
 		return fmt.Errorf("AWS credentials are required")
 	}
-	
+
 	c.rateLimitedCall()
-	
+
 	cfg, err := c.getAWSConfig(ctx)
 	if err != nil {
 		return err
 	}
-	
+
 	sesClient := sesv2.NewFromConfig(cfg)
-	
+
 	// Test connection by getting account sending enabled status
 	_, err = sesClient.GetAccount(ctx, &sesv2.GetAccountInput{})
 	return err
@@ -169,26 +182,26 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 	if c.config.AccessKey == "" || c.config.SecretKey == "" {
 		return nil, fmt.Errorf("AWS credentials not configured")
 	}
-	
+
 	c.rateLimitedCall()
-	
+
 	// Create context with timeout for large suppression lists
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
-	
+
 	cfg, err := c.getAWSConfig(ctxWithTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create AWS config: %w", err)
 	}
-	
+
 	sesClient := sesv2.NewFromConfig(cfg)
-	
+
 	log.Printf("Starting to fetch AWS suppression list...")
-	
+
 	var allSuppressions []*SuppressionStatus
-	nextToken := ""  // Start with empty string like Python
+	nextToken := "" // Start with empty string like Python
 	pageCount := 0
-	
+
 	// Loop while nextToken is not nil (like Python: while next_token is not None)
 	for nextToken != "END" {
 		select {
@@ -197,7 +210,7 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 			return allSuppressions, nil // Return partial results
 		default:
 		}
-		
+
 		// Prepare input - include NextToken only if it's not empty
 		input := &sesv2.ListSuppressedDestinationsInput{
 			PageSize: aws.Int32(1000), // Maximum page size like Python
@@ -205,13 +218,13 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 		if nextToken != "" {
 			input.NextToken = aws.String(nextToken)
 		}
-		
+
 		result, err := sesClient.ListSuppressedDestinations(ctxWithTimeout, input)
 		if err != nil {
 			log.Printf("Failed to fetch page %d: %v", pageCount+1, err)
 			return allSuppressions, fmt.Errorf("failed to get page %d: %w", pageCount+1, err)
 		}
-		
+
 		// Process current batch
 		for _, dest := range result.SuppressedDestinationSummaries {
 			allSuppressions = append(allSuppressions, &SuppressionStatus{
@@ -221,10 +234,10 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 				LastUpdate: dest.LastUpdateTime.Format("2006-01-02T15:04:05Z"),
 			})
 		}
-		
+
 		pageCount++
 		log.Printf("Fetched page %d: %d records (total: %d)", pageCount, len(result.SuppressedDestinationSummaries), len(allSuppressions))
-		
+
 		// Get next token - set to "END" if nil (like Python: next_token becomes None)
 		if result.NextToken != nil {
 			nextToken = *result.NextToken
@@ -232,7 +245,7 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 			nextToken = "END" // Signal to end loop
 			log.Printf("Completed fetching all pages. Total: %d records", len(allSuppressions))
 		}
-		
+
 		// Exponential backoff delay to avoid rate limiting
 		baseDelay := time.Duration(pageCount) * 200 * time.Millisecond
 		if baseDelay < 1*time.Second {
@@ -244,7 +257,7 @@ func (c *SESClient) GetSuppressionList(ctx context.Context) ([]*SuppressionStatu
 		log.Printf("Waiting %v before next page to avoid rate limiting...", baseDelay)
 		time.Sleep(baseDelay)
 	}
-	
+
 	log.Printf("Successfully fetched all %d suppressed destinations from AWS", len(allSuppressions))
 	return allSuppressions, nil
 }

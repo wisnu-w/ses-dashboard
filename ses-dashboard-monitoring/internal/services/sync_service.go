@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,12 +51,12 @@ func (s *SyncService) StartBackgroundSync(ctx context.Context) {
 				time.Sleep(5 * time.Minute) // fallback interval
 				continue
 			}
-			
+
 			interval := time.Duration(cfg.SyncInterval) * time.Minute
 			if interval < time.Minute {
 				interval = 5 * time.Minute // minimum 1 minute
 			}
-			
+
 			time.Sleep(interval)
 			go s.SyncNow(context.Background())
 		}
@@ -148,11 +149,14 @@ func (s *SyncService) SyncNow(ctx context.Context) error {
 	for email, awsItem := range awsMap {
 		if _, exists := dbMap[email]; !exists {
 			toAdd = append(toAdd, &models.Suppression{
-				Email:     awsItem.Email,
-				Reason:    awsItem.Reason,
-				Source:    "AWS",
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				Email:           awsItem.Email,
+				Reason:          awsItem.Reason,
+				Source:          "AWS",
+				SuppressionType: strings.ToLower(awsItem.Reason),
+				AWSStatus:       "suppressed",
+				IsActive:        true,
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
 			})
 		}
 	}
@@ -171,11 +175,14 @@ func (s *SyncService) SyncNow(ctx context.Context) error {
 		if dbItem, exists := dbMap[email]; exists {
 			if dbItem.Reason != awsItem.Reason {
 				toUpdate = append(toUpdate, &models.Suppression{
-					Email:     awsItem.Email,
-					Reason:    awsItem.Reason,
-					Source:    "AWS",
-					CreatedAt: dbItem.CreatedAt,
-					UpdatedAt: time.Now(),
+					Email:           awsItem.Email,
+					Reason:          awsItem.Reason,
+					Source:          "AWS",
+					SuppressionType: dbItem.SuppressionType,
+					AWSStatus:       "suppressed",
+					IsActive:        true,
+					CreatedAt:       dbItem.CreatedAt,
+					UpdatedAt:       time.Now(),
 				})
 			}
 		}
