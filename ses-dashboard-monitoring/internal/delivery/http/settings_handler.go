@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"ses-monitoring/internal/domain/settings"
 	"ses-monitoring/internal/infrastructure/aws"
@@ -338,7 +339,7 @@ func (h *SettingsHandler) UpdateTimezoneSettings(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/suppression/{email}/status [get]
 func (h *SettingsHandler) CheckEmailSuppression(c *gin.Context) {
-	email := c.Param("email")
+	email := strings.ToLower(strings.TrimSpace(c.Param("email")))
 	if email == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Email is required"})
 		return

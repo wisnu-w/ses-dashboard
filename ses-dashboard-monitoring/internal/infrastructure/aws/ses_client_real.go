@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -53,6 +54,7 @@ func (c *SESClient) CheckSuppressionStatus(ctx context.Context, email string) (*
 		return nil, fmt.Errorf("AWS integration is disabled")
 	}
 
+	email = strings.ToLower(strings.TrimSpace(email))
 	c.rateLimitedCall()
 
 	cfg, err := c.getAWSConfig(ctx)
@@ -67,13 +69,18 @@ func (c *SESClient) CheckSuppressionStatus(ctx context.Context, email string) (*
 	})
 
 	if err != nil {
-		// If not found, email is not suppressed
-		return &SuppressionStatus{
-			Email:      email,
-			Suppressed: false,
-			Reason:     "Not suppressed",
-			LastUpdate: "",
-		}, nil
+		var notFound *types.NotFoundException
+		if errors.As(err, &notFound) {
+			return &SuppressionStatus{
+				Email:      email,
+				Suppressed: false,
+				Reason:     "Not suppressed",
+				LastUpdate: "",
+			}, nil
+		}
+
+		log.Printf("failed to check suppression status for %s in region %s: %T %v", email, c.config.Region, err, err)
+		return nil, fmt.Errorf("failed to check suppression status in AWS SES: %w", err)
 	}
 
 	return &SuppressionStatus{
