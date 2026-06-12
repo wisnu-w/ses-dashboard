@@ -82,7 +82,7 @@ func main() {
 	monitoringHandler := http.NewMonitoringHandler(sesUC, settingsRepo)
 	authHandler := http.NewAuthHandler(authUC)
 	userHandler := http.NewUserHandler(authUC)
-	settingsHandler := http.NewSettingsHandler(settingsRepo)
+	settingsHandler := http.NewSettingsHandler(settingsRepo, suppressionDBRepo)
 	suppressionHandler := http.NewSuppressionHandler(settingsRepo, suppressionRepo, suppressionDBRepo, syncService)
 	healthHandler := http.NewHealthHandler()
 

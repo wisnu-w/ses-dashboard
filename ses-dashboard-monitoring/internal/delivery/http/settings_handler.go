@@ -1,21 +1,24 @@
 package http
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
 	"ses-monitoring/internal/domain/settings"
 	"ses-monitoring/internal/infrastructure/aws"
+	"ses-monitoring/internal/infrastructure/database"
 
 	"github.com/gin-gonic/gin"
 )
 
 type SettingsHandler struct {
-	settingsRepo settings.Repository
+	settingsRepo      settings.Repository
+	suppressionDBRepo *database.SuppressionRepository
 }
 
-func NewSettingsHandler(settingsRepo settings.Repository) *SettingsHandler {
-	return &SettingsHandler{settingsRepo: settingsRepo}
+func NewSettingsHandler(settingsRepo settings.Repository, suppressionDBRepo *database.SuppressionRepository) *SettingsHandler {
+	return &SettingsHandler{settingsRepo: settingsRepo, suppressionDBRepo: suppressionDBRepo}
 }
 
 // GetAWSSettings godoc
@@ -357,6 +360,19 @@ func (h *SettingsHandler) CheckEmailSuppression(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	if !status.Suppressed {
+		localSuppression, dbErr := h.suppressionDBRepo.GetByEmail(email)
+		if dbErr != nil {
+			log.Printf("failed to load local suppression for %s: %v", email, dbErr)
+		} else if localSuppression != nil && localSuppression.IsActive {
+			if err := h.suppressionDBRepo.Delete(email); err != nil {
+				log.Printf("failed to deactivate local suppression for %s after AWS check: %v", email, err)
+			} else {
+				log.Printf("deactivated local suppression for %s after AWS returned not suppressed", email)
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, status)
