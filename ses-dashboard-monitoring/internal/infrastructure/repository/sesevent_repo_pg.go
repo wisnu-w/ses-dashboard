@@ -244,20 +244,45 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 	}
 
 	query := `
-		WITH filtered_events AS (` + filteredQuery + `)
-		SELECT DISTINCT ON (message_id)
-			message_id,
-			COALESCE(email, '') AS email,
-			COALESCE(subject, '') AS subject,
-			COALESCE(source, '') AS source,
-			COALESCE(status, '') AS latest_status,
-			COALESCE(event_type, '') AS latest_event,
-			event_timestamp AS first_event_at,
-			event_timestamp AS last_event_at
-		FROM filtered_events
-		ORDER BY message_id, event_timestamp DESC
+		WITH filtered_events AS (` + filteredQuery + `),
+		latest_events AS (
+			SELECT DISTINCT ON (message_id)
+				message_id,
+				COALESCE(email, '') AS email,
+				COALESCE(subject, '') AS subject,
+				COALESCE(source, '') AS source,
+				COALESCE(event_type, '') AS latest_event,
+				event_timestamp AS last_event_at
+			FROM filtered_events
+			ORDER BY message_id, event_timestamp DESC
+		),
+		event_summaries AS (
+			SELECT
+				message_id,
+				MIN(event_timestamp) AS first_event_at,
+				CASE
+					WHEN BOOL_OR(event_type = 'Complaint') THEN 'Complaint'
+					WHEN BOOL_OR(event_type = 'Bounce') THEN 'Bounce'
+					WHEN BOOL_OR(event_type = 'Delivery') THEN 'Delivery'
+					WHEN BOOL_OR(event_type = 'Send') THEN 'Pending'
+					ELSE COALESCE(MAX(event_type), 'Unknown')
+				END AS latest_status
+			FROM filtered_events
+			GROUP BY message_id
+		)
+		SELECT
+			l.message_id,
+			l.email,
+			l.subject,
+			l.source,
+			s.latest_status,
+			l.latest_event,
+			s.first_event_at,
+			l.last_event_at
+		FROM latest_events l
+		JOIN event_summaries s ON s.message_id = l.message_id
+		ORDER BY l.last_event_at DESC
 	`
-	query = `SELECT * FROM (` + query + `) latest_events ORDER BY last_event_at DESC`
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex+1, argIndex+2)
 	args = append(args, limit, offset)
 

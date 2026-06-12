@@ -26,14 +26,14 @@ const EventsPage = () => {
   const [eventsData, setEventsData] = useState<EventsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(50);
+  const [pageSize] = useState(25);
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   
   // Debounce search input to reduce API calls
-  const debouncedSearch = useDebounce(search, 500);
+  const debouncedSearch = useDebounce(search, 800);
 
   const loadEvents = useCallback(async (page = 1, searchTerm = debouncedSearch, start = startDate, end = endDate) => {
     try {

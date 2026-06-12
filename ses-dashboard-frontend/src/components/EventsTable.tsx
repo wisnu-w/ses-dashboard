@@ -51,10 +51,24 @@ const getEventTypeColor = (eventType: string) => {
 };
 
 const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'SUCCESS':
+  const normalizedStatus = status?.toLowerCase() || '';
+  switch (normalizedStatus) {
+    case 'complaint':
+      return 'bg-orange-100 text-orange-800';
+    case 'bounce':
+      return 'bg-red-100 text-red-800';
+    case 'delivery':
       return 'bg-green-100 text-green-800';
-    case 'FAILED':
+    case 'pending':
+    case 'send':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'open':
+      return 'bg-purple-100 text-purple-800';
+    case 'click':
+      return 'bg-indigo-100 text-indigo-800';
+    case 'success':
+      return 'bg-green-100 text-green-800';
+    case 'failed':
       return 'bg-red-100 text-red-800';
     default:
       return 'bg-gray-100 text-gray-800';
