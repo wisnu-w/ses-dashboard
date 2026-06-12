@@ -217,23 +217,8 @@ func (r *sesEventRepo) GetEventGroupsWithFilter(ctx context.Context, limit, offs
 }
 
 func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*sesevent.MessageGroup, error) {
-	query := `
-		SELECT
-			message_id,
-			COALESCE((array_agg(email ORDER BY event_timestamp DESC))[1], '') AS email,
-			COALESCE((array_agg(subject ORDER BY event_timestamp DESC))[1], '') AS subject,
-			COALESCE((array_agg(source ORDER BY event_timestamp DESC))[1], '') AS source,
-			COALESCE((array_agg(status ORDER BY event_timestamp DESC))[1], '') AS latest_status,
-			COALESCE((array_agg(event_type ORDER BY event_timestamp DESC))[1], '') AS latest_event,
-			COALESCE(string_agg(DISTINCT event_type, ','), '') AS event_types,
-			COUNT(*) AS event_count,
-			MIN(event_timestamp) AS first_event_at,
-			MAX(event_timestamp) AS last_event_at,
-			BOOL_OR(event_type = 'Bounce') AS has_bounce,
-			BOOL_OR(event_type = 'Complaint') AS has_complaint,
-			BOOL_OR(event_type = 'Delivery') AS has_delivery,
-			BOOL_OR(event_type = 'Open') AS has_open,
-			BOOL_OR(event_type = 'Click') AS has_click
+	filteredQuery := `
+		SELECT message_id, email, subject, source, status, event_type, event_timestamp
 		FROM ses_events
 		WHERE message_id IS NOT NULL AND message_id <> ''
 	`
@@ -242,23 +227,37 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 
 	if search != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
+		filteredQuery += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
 		args = append(args, "%"+search+"%")
 	}
 
 	if startDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND event_timestamp >= $%d", argIndex)
+		filteredQuery += fmt.Sprintf(" AND event_timestamp >= $%d", argIndex)
 		args = append(args, startDate)
 	}
 
 	if endDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND event_timestamp <= $%d", argIndex)
+		filteredQuery += fmt.Sprintf(" AND event_timestamp <= $%d", argIndex)
 		args = append(args, endDate+" 23:59:59")
 	}
 
-	query += " GROUP BY message_id ORDER BY MAX(event_timestamp) DESC"
+	query := `
+		WITH filtered_events AS (` + filteredQuery + `)
+		SELECT DISTINCT ON (message_id)
+			message_id,
+			COALESCE(email, '') AS email,
+			COALESCE(subject, '') AS subject,
+			COALESCE(source, '') AS source,
+			COALESCE(status, '') AS latest_status,
+			COALESCE(event_type, '') AS latest_event,
+			event_timestamp AS first_event_at,
+			event_timestamp AS last_event_at
+		FROM filtered_events
+		ORDER BY message_id, event_timestamp DESC
+	`
+	query = `SELECT * FROM (` + query + `) latest_events ORDER BY last_event_at DESC`
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex+1, argIndex+2)
 	args = append(args, limit, offset)
 
@@ -271,7 +270,6 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 	groups := []*sesevent.MessageGroup{}
 	for rows.Next() {
 		group := &sesevent.MessageGroup{}
-		var eventTypes string
 		err := rows.Scan(
 			&group.MessageID,
 			&group.Email,
@@ -279,21 +277,11 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 			&group.Source,
 			&group.LatestStatus,
 			&group.LatestEvent,
-			&eventTypes,
-			&group.EventCount,
 			&group.FirstEventAt,
 			&group.LastEventAt,
-			&group.HasBounce,
-			&group.HasComplaint,
-			&group.HasDelivery,
-			&group.HasOpen,
-			&group.HasClick,
 		)
 		if err != nil {
 			return nil, err
-		}
-		if eventTypes != "" {
-			group.EventTypes = strings.Split(eventTypes, ",")
 		}
 		groups = append(groups, group)
 	}

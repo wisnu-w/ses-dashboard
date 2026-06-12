@@ -124,68 +124,48 @@ const EventsTable = ({ events, pagination, onPageChange, loading = false }: Even
           <p className="text-sm text-gray-600 mt-1">Grouped by SES message ID for easier tracing</p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-[1250px] w-full divide-y divide-gray-200">
+        <div className="overflow-hidden">
+          <table className="w-full table-fixed divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">Message ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-72">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Latest Event</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Count</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">Last Event</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[22%]">Message ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[22%]">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[24%]">Subject</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[14%]">Last Event</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Action</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {events.map((event) => (
                 <tr key={event.message_id} className="hover:bg-gray-50 transition-colors duration-150">
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                  <td className="px-4 py-4 text-sm text-gray-900">
                     <div className="truncate font-medium" title={event.message_id}>{event.message_id}</div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {event.event_types.map((eventType) => (
-                        <span key={eventType} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getEventTypeColor(eventType)}`}>
-                          {eventType}
-                        </span>
-                      ))}
-                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-xs truncate">
-                    <span title={event.email}>{event.email}</span>
+                  <td className="px-4 py-4 text-sm text-gray-900">
+                    <div className="truncate" title={event.email}>{event.email}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                  <td className="px-4 py-4 text-sm text-gray-900">
                     <div className="truncate" title={event.subject || 'No subject'}>
                       {event.subject || 'No subject'}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 truncate" title={event.source}>{event.source}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {getEventIcon(event.latest_event)}
-                      <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEventTypeColor(event.latest_event)}`}>
-                        {event.latest_event}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(event.latest_status)}`}>
-                      {event.latest_status}
+                      {event.latest_status || 'UNKNOWN'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                    {event.event_count.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(event.last_event_at)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-500">
                     <button
                       onClick={() => openDetail(event.message_id)}
-                      className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+                      className="inline-flex items-center px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+                      title="View timeline"
                     >
-                      <Eye className="w-4 h-4 mr-1.5" />
-                      Detail
+                      <Eye className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>
