@@ -46,13 +46,13 @@ func NewMonitoringHandler(uc *usecase.SESUsecase, settingsRepo settings.Reposito
 }
 
 // GetEvents godoc
-// @Summary Get SES events with pagination
-// @Description Retrieve list of SES events with pagination support
+// @Summary Get SES events grouped by message ID with pagination
+// @Description Retrieve grouped SES event threads with pagination support
 // @Tags monitoring
 // @Produce json
 // @Security BearerAuth
 // @Param page query int false "Page number (default: 1)" minimum(1)
-// @Param limit query int false "Number of events per page (default: 50, max: 1000)" minimum(1) maximum(1000)
+// @Param limit query int false "Number of event groups per page (default: 50, max: 1000)" minimum(1) maximum(1000)
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
@@ -79,27 +79,24 @@ func (h *MonitoringHandler) GetEvents(c *gin.Context) {
 
 	offset := (page - 1) * limit
 
-	var events []*sesevent.Event
+	var events []*sesevent.MessageGroup
 	var total int
 	var err error
 
-	// Use optimized queries based on filter presence
 	if search != "" || startDate != "" || endDate != "" {
-		events, err = h.uc.GetEventsWithFilter(c.Request.Context(), limit, offset, search, startDate, endDate)
+		events, err = h.uc.GetEventGroupsWithFilter(c.Request.Context(), limit, offset, search, startDate, endDate)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		// Get filtered count
-		total, err = h.uc.GetFilteredEventCount(c.Request.Context(), search, startDate, endDate)
+		total, err = h.uc.GetEventGroupCount(c.Request.Context(), search, startDate, endDate)
 	} else {
-		events, err = h.uc.GetEventsPaginated(c.Request.Context(), limit, offset)
+		events, err = h.uc.GetEventGroupsPaginated(c.Request.Context(), limit, offset)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		// Get total count
-		total, err = h.uc.GetEventCount(c.Request.Context())
+		total, err = h.uc.GetEventGroupCount(c.Request.Context(), "", "", "")
 	}
 
 	if err != nil {
@@ -107,8 +104,7 @@ func (h *MonitoringHandler) GetEvents(c *gin.Context) {
 		return
 	}
 
-	// Convert timestamps to configured timezone
-	if err := h.convertEventsTimezone(events); err != nil {
+	if err := h.convertEventGroupsTimezone(events); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -125,6 +121,41 @@ func (h *MonitoringHandler) GetEvents(c *gin.Context) {
 			"hasNext":    page < totalPages,
 			"hasPrev":    page > 1,
 		},
+	})
+}
+
+// GetEventDetail godoc
+// @Summary Get SES event timeline by message ID
+// @Description Retrieve full SES event timeline for one message ID
+// @Tags monitoring
+// @Produce json
+// @Security BearerAuth
+// @Param messageId path string true "SES message ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /api/events/{messageId} [get]
+func (h *MonitoringHandler) GetEventDetail(c *gin.Context) {
+	messageID := c.Param("messageId")
+	if messageID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "messageId is required"})
+		return
+	}
+
+	events, err := h.uc.GetEventsByMessageID(c.Request.Context(), messageID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.convertEventsTimezone(events); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message_id": messageID,
+		"events":     events,
 	})
 }
 
@@ -477,6 +508,22 @@ func (h *MonitoringHandler) loadTimezone() {
 
 func (h *MonitoringHandler) RefreshTimezone() {
 	h.loadTimezone()
+}
+
+func (h *MonitoringHandler) convertEventGroupsTimezone(groups []*sesevent.MessageGroup) error {
+	timezone := h.getTimezoneFromCache()
+
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return err
+	}
+
+	for i := range groups {
+		groups[i].FirstEventAt = groups[i].FirstEventAt.In(loc)
+		groups[i].LastEventAt = groups[i].LastEventAt.In(loc)
+	}
+
+	return nil
 }
 
 func (h *MonitoringHandler) convertEventsTimezone(events []*sesevent.Event) error {

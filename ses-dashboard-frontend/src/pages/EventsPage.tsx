@@ -3,6 +3,7 @@ import { Search, Calendar, Filter, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import EventsTable from '../components/EventsTable';
 import { eventsService } from '../services/api';
+import type { EventsResponse } from '../types/api';
 
 // Custom hook for debouncing
 const useDebounce = (value: string, delay: number) => {
@@ -22,7 +23,7 @@ const useDebounce = (value: string, delay: number) => {
 };
 
 const EventsPage = () => {
-  const [eventsData, setEventsData] = useState<any>(null);
+  const [eventsData, setEventsData] = useState<EventsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(50);

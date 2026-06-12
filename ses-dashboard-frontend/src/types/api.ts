@@ -43,9 +43,32 @@ export interface PaginationInfo {
   hasPrev: boolean;
 }
 
+export interface MessageGroup {
+  message_id: string;
+  email: string;
+  subject: string;
+  source: string;
+  latest_status: string;
+  latest_event: string;
+  event_types: string[];
+  event_count: number;
+  first_event_at: string;
+  last_event_at: string;
+  has_bounce: boolean;
+  has_complaint: boolean;
+  has_delivery: boolean;
+  has_open: boolean;
+  has_click: boolean;
+}
+
 export interface EventsResponse {
-  events: Event[];
+  events: MessageGroup[];
   pagination: PaginationInfo;
+}
+
+export interface EventDetailResponse {
+  message_id: string;
+  events: Event[];
 }
 
 export interface MetricsResponse {

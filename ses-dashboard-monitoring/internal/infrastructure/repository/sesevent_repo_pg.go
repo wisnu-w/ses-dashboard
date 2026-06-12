@@ -208,6 +208,172 @@ func (r *sesEventRepo) GetEventsWithFilter(ctx context.Context, limit, offset in
 	return events, nil
 }
 
+func (r *sesEventRepo) GetEventGroupsPaginated(ctx context.Context, limit, offset int) ([]*sesevent.MessageGroup, error) {
+	return r.getEventGroups(ctx, limit, offset, "", "", "")
+}
+
+func (r *sesEventRepo) GetEventGroupsWithFilter(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*sesevent.MessageGroup, error) {
+	return r.getEventGroups(ctx, limit, offset, search, startDate, endDate)
+}
+
+func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*sesevent.MessageGroup, error) {
+	query := `
+		SELECT
+			message_id,
+			COALESCE((array_agg(email ORDER BY event_timestamp DESC))[1], '') AS email,
+			COALESCE((array_agg(subject ORDER BY event_timestamp DESC))[1], '') AS subject,
+			COALESCE((array_agg(source ORDER BY event_timestamp DESC))[1], '') AS source,
+			COALESCE((array_agg(status ORDER BY event_timestamp DESC))[1], '') AS latest_status,
+			COALESCE((array_agg(event_type ORDER BY event_timestamp DESC))[1], '') AS latest_event,
+			COALESCE(string_agg(DISTINCT event_type, ','), '') AS event_types,
+			COUNT(*) AS event_count,
+			MIN(event_timestamp) AS first_event_at,
+			MAX(event_timestamp) AS last_event_at,
+			BOOL_OR(event_type = 'Bounce') AS has_bounce,
+			BOOL_OR(event_type = 'Complaint') AS has_complaint,
+			BOOL_OR(event_type = 'Delivery') AS has_delivery,
+			BOOL_OR(event_type = 'Open') AS has_open,
+			BOOL_OR(event_type = 'Click') AS has_click
+		FROM ses_events
+		WHERE message_id IS NOT NULL AND message_id <> ''
+	`
+	args := []interface{}{}
+	argIndex := 0
+
+	if search != "" {
+		argIndex++
+		query += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
+		args = append(args, "%"+search+"%")
+	}
+
+	if startDate != "" {
+		argIndex++
+		query += fmt.Sprintf(" AND event_timestamp >= $%d", argIndex)
+		args = append(args, startDate)
+	}
+
+	if endDate != "" {
+		argIndex++
+		query += fmt.Sprintf(" AND event_timestamp <= $%d", argIndex)
+		args = append(args, endDate+" 23:59:59")
+	}
+
+	query += " GROUP BY message_id ORDER BY MAX(event_timestamp) DESC"
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex+1, argIndex+2)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groups := []*sesevent.MessageGroup{}
+	for rows.Next() {
+		group := &sesevent.MessageGroup{}
+		var eventTypes string
+		err := rows.Scan(
+			&group.MessageID,
+			&group.Email,
+			&group.Subject,
+			&group.Source,
+			&group.LatestStatus,
+			&group.LatestEvent,
+			&eventTypes,
+			&group.EventCount,
+			&group.FirstEventAt,
+			&group.LastEventAt,
+			&group.HasBounce,
+			&group.HasComplaint,
+			&group.HasDelivery,
+			&group.HasOpen,
+			&group.HasClick,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if eventTypes != "" {
+			group.EventTypes = strings.Split(eventTypes, ",")
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
+func (r *sesEventRepo) GetEventGroupCount(ctx context.Context, search, startDate, endDate string) (int, error) {
+	query := `SELECT COUNT(*) FROM (SELECT message_id FROM ses_events WHERE message_id IS NOT NULL AND message_id <> ''`
+	args := []interface{}{}
+	argIndex := 0
+
+	if search != "" {
+		argIndex++
+		query += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
+		args = append(args, "%"+search+"%")
+	}
+
+	if startDate != "" {
+		argIndex++
+		query += fmt.Sprintf(" AND event_timestamp >= $%d", argIndex)
+		args = append(args, startDate)
+	}
+
+	if endDate != "" {
+		argIndex++
+		query += fmt.Sprintf(" AND event_timestamp <= $%d", argIndex)
+		args = append(args, endDate+" 23:59:59")
+	}
+
+	query += ` GROUP BY message_id) grouped_events`
+	var count int
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	return count, err
+}
+
+func (r *sesEventRepo) GetEventsByMessageID(ctx context.Context, messageID string) ([]*sesevent.Event, error) {
+	query := `
+		SELECT message_id, email, subject, event_type, status, reason, source, recipients,
+			   event_timestamp, bounce_type, bounce_sub_type, diagnostic_code,
+			   processing_time_millis, smtp_response, remote_mta_ip, reporting_mta, tags
+		FROM ses_events
+		WHERE message_id = $1
+		ORDER BY event_timestamp ASC
+	`
+	rows, err := r.db.QueryContext(ctx, query, messageID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []*sesevent.Event
+	for rows.Next() {
+		e := &sesevent.Event{}
+		err := rows.Scan(
+			&e.MessageID,
+			&e.Email,
+			&e.Subject,
+			&e.EventType,
+			&e.Status,
+			&e.Reason,
+			&e.Source,
+			&e.Recipients,
+			&e.EventTimestamp,
+			&e.BounceType,
+			&e.BounceSubType,
+			&e.DiagnosticCode,
+			&e.ProcessingTimeMillis,
+			&e.SmtpResponse,
+			&e.RemoteMtaIp,
+			&e.ReportingMTA,
+			&e.Tags,
+		)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, e)
+	}
+	return events, nil
+}
+
 func (r *sesEventRepo) GetFilteredEventCount(ctx context.Context, search, startDate, endDate string) (int, error) {
 	query := `SELECT COUNT(*) FROM ses_events WHERE 1=1`
 	args := []interface{}{}

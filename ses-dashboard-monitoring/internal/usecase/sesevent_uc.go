@@ -34,8 +34,24 @@ func (uc *SESUsecase) GetEventsWithFilter(ctx context.Context, limit, offset int
 	return uc.repo.GetEventsWithFilter(ctx, limit, offset, search, startDate, endDate)
 }
 
+func (uc *SESUsecase) GetEventGroupsPaginated(ctx context.Context, limit, offset int) ([]*sesevent.MessageGroup, error) {
+	return uc.repo.GetEventGroupsPaginated(ctx, limit, offset)
+}
+
+func (uc *SESUsecase) GetEventGroupsWithFilter(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*sesevent.MessageGroup, error) {
+	return uc.repo.GetEventGroupsWithFilter(ctx, limit, offset, search, startDate, endDate)
+}
+
 func (uc *SESUsecase) GetFilteredEventCount(ctx context.Context, search, startDate, endDate string) (int, error) {
 	return uc.repo.GetFilteredEventCount(ctx, search, startDate, endDate)
+}
+
+func (uc *SESUsecase) GetEventGroupCount(ctx context.Context, search, startDate, endDate string) (int, error) {
+	return uc.repo.GetEventGroupCount(ctx, search, startDate, endDate)
+}
+
+func (uc *SESUsecase) GetEventsByMessageID(ctx context.Context, messageID string) ([]*sesevent.Event, error) {
+	return uc.repo.GetEventsByMessageID(ctx, messageID)
 }
 
 func (uc *SESUsecase) GetEventCount(ctx context.Context) (int, error) {

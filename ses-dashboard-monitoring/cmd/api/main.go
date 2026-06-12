@@ -137,6 +137,7 @@ func main() {
 	})
 	{
 		api.GET("/events", monitoringHandler.GetEvents)
+		api.GET("/events/:messageId", monitoringHandler.GetEventDetail)
 		api.GET("/metrics", monitoringHandler.GetMetrics)
 		api.GET("/metrics/daily", monitoringHandler.GetDailyMetrics)
 		api.GET("/metrics/monthly", monitoringHandler.GetMonthlyMetrics)

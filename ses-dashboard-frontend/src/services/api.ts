@@ -7,6 +7,7 @@ import type {
   DailyMetrics,
   MonthlyMetrics,
   HourlyMetrics,
+  EventDetailResponse,
   User,
   CreateUserRequest
 } from '../types/api';
@@ -99,6 +100,11 @@ export const eventsService = {
         }
       };
     }
+  },
+
+  getEventDetail: async (messageId: string): Promise<EventDetailResponse> => {
+    const response = await api.get(`/api/events/${encodeURIComponent(messageId)}`);
+    return response.data;
   },
 };
 
