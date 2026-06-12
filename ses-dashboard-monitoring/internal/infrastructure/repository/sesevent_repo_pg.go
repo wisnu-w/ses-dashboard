@@ -50,6 +50,45 @@ func (r *sesEventRepo) Save(ctx context.Context, e *sesevent.Event) error {
 	return err
 }
 
+func (r *sesEventRepo) UpsertMessageSummary(ctx context.Context, e *sesevent.Event) error {
+	query := `
+		INSERT INTO ses_message_summaries (
+			message_id, email, subject, source, latest_event, latest_status, status_priority,
+			first_event_at, last_event_at, created_at, updated_at
+		)
+		VALUES (
+			$1, $2, $3, $4, $5,
+			CASE
+				WHEN $5 = 'Complaint' THEN 'Complaint'
+				WHEN $5 = 'Bounce' THEN 'Bounce'
+				WHEN $5 = 'Delivery' THEN 'Delivery'
+				WHEN $5 = 'Send' THEN 'Pending'
+				ELSE COALESCE($5, 'Unknown')
+			END,
+			CASE
+				WHEN $5 = 'Complaint' THEN 40
+				WHEN $5 = 'Bounce' THEN 30
+				WHEN $5 = 'Delivery' THEN 20
+				WHEN $5 = 'Send' THEN 10
+				ELSE 0
+			END,
+			$6, $6, NOW(), NOW()
+		)
+		ON CONFLICT (message_id) DO UPDATE SET
+			email = CASE WHEN EXCLUDED.last_event_at >= ses_message_summaries.last_event_at THEN EXCLUDED.email ELSE ses_message_summaries.email END,
+			subject = CASE WHEN EXCLUDED.last_event_at >= ses_message_summaries.last_event_at THEN EXCLUDED.subject ELSE ses_message_summaries.subject END,
+			source = CASE WHEN EXCLUDED.last_event_at >= ses_message_summaries.last_event_at THEN EXCLUDED.source ELSE ses_message_summaries.source END,
+			latest_event = CASE WHEN EXCLUDED.last_event_at >= ses_message_summaries.last_event_at THEN EXCLUDED.latest_event ELSE ses_message_summaries.latest_event END,
+			latest_status = CASE WHEN EXCLUDED.status_priority >= ses_message_summaries.status_priority THEN EXCLUDED.latest_status ELSE ses_message_summaries.latest_status END,
+			status_priority = GREATEST(ses_message_summaries.status_priority, EXCLUDED.status_priority),
+			first_event_at = LEAST(ses_message_summaries.first_event_at, EXCLUDED.first_event_at),
+			last_event_at = GREATEST(ses_message_summaries.last_event_at, EXCLUDED.last_event_at),
+			updated_at = NOW()
+	`
+	_, err := r.db.ExecContext(ctx, query, e.MessageID, e.Email, e.Subject, e.Source, e.EventType, e.EventTimestamp)
+	return err
+}
+
 func (r *sesEventRepo) GetEvents(ctx context.Context) ([]*sesevent.Event, error) {
 	query := `
 		SELECT message_id, email, subject, event_type, status, reason, source, recipients,
@@ -217,72 +256,33 @@ func (r *sesEventRepo) GetEventGroupsWithFilter(ctx context.Context, limit, offs
 }
 
 func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*sesevent.MessageGroup, error) {
-	filteredQuery := `
-		SELECT message_id, email, subject, source, status, event_type, event_timestamp
-		FROM ses_events
-		WHERE message_id IS NOT NULL AND message_id <> ''
+	query := `
+		SELECT message_id, email, subject, source, latest_status, latest_event, first_event_at, last_event_at
+		FROM ses_message_summaries
+		WHERE 1=1
 	`
 	args := []interface{}{}
 	argIndex := 0
 
 	if search != "" {
 		argIndex++
-		filteredQuery += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
+		query += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
 		args = append(args, "%"+search+"%")
 	}
 
 	if startDate != "" {
 		argIndex++
-		filteredQuery += fmt.Sprintf(" AND event_timestamp >= $%d", argIndex)
+		query += fmt.Sprintf(" AND last_event_at >= $%d", argIndex)
 		args = append(args, startDate)
 	}
 
 	if endDate != "" {
 		argIndex++
-		filteredQuery += fmt.Sprintf(" AND event_timestamp <= $%d", argIndex)
+		query += fmt.Sprintf(" AND last_event_at <= $%d", argIndex)
 		args = append(args, endDate+" 23:59:59")
 	}
 
-	query := `
-		WITH filtered_events AS (` + filteredQuery + `),
-		latest_events AS (
-			SELECT DISTINCT ON (message_id)
-				message_id,
-				COALESCE(email, '') AS email,
-				COALESCE(subject, '') AS subject,
-				COALESCE(source, '') AS source,
-				COALESCE(event_type, '') AS latest_event,
-				event_timestamp AS last_event_at
-			FROM filtered_events
-			ORDER BY message_id, event_timestamp DESC
-		),
-		event_summaries AS (
-			SELECT
-				message_id,
-				MIN(event_timestamp) AS first_event_at,
-				CASE
-					WHEN BOOL_OR(event_type = 'Complaint') THEN 'Complaint'
-					WHEN BOOL_OR(event_type = 'Bounce') THEN 'Bounce'
-					WHEN BOOL_OR(event_type = 'Delivery') THEN 'Delivery'
-					WHEN BOOL_OR(event_type = 'Send') THEN 'Pending'
-					ELSE COALESCE(MAX(event_type), 'Unknown')
-				END AS latest_status
-			FROM filtered_events
-			GROUP BY message_id
-		)
-		SELECT
-			l.message_id,
-			l.email,
-			l.subject,
-			l.source,
-			s.latest_status,
-			l.latest_event,
-			s.first_event_at,
-			l.last_event_at
-		FROM latest_events l
-		JOIN event_summaries s ON s.message_id = l.message_id
-		ORDER BY l.last_event_at DESC
-	`
+	query += " ORDER BY last_event_at DESC"
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex+1, argIndex+2)
 	args = append(args, limit, offset)
 
@@ -314,7 +314,7 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 }
 
 func (r *sesEventRepo) GetEventGroupCount(ctx context.Context, search, startDate, endDate string) (int, error) {
-	query := `SELECT COUNT(*) FROM (SELECT message_id FROM ses_events WHERE message_id IS NOT NULL AND message_id <> ''`
+	query := `SELECT COUNT(*) FROM ses_message_summaries WHERE 1=1`
 	args := []interface{}{}
 	argIndex := 0
 
@@ -326,17 +326,16 @@ func (r *sesEventRepo) GetEventGroupCount(ctx context.Context, search, startDate
 
 	if startDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND event_timestamp >= $%d", argIndex)
+		query += fmt.Sprintf(" AND last_event_at >= $%d", argIndex)
 		args = append(args, startDate)
 	}
 
 	if endDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND event_timestamp <= $%d", argIndex)
+		query += fmt.Sprintf(" AND last_event_at <= $%d", argIndex)
 		args = append(args, endDate+" 23:59:59")
 	}
 
-	query += ` GROUP BY message_id) grouped_events`
 	var count int
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
 	return count, err

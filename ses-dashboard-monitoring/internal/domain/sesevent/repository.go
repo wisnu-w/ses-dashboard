@@ -7,6 +7,7 @@ import (
 
 type Repository interface {
 	Save(ctx context.Context, event *Event) error
+	UpsertMessageSummary(ctx context.Context, event *Event) error
 	GetEvents(ctx context.Context) ([]*Event, error)
 	GetEventsPaginated(ctx context.Context, limit, offset int) ([]*Event, error)
 	GetEventsWithFilter(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*Event, error)

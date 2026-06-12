@@ -19,7 +19,10 @@ func (uc *SESUsecase) HandleEvent(
 	ctx context.Context,
 	event *sesevent.Event,
 ) error {
-	return uc.repo.Save(ctx, event)
+	if err := uc.repo.Save(ctx, event); err != nil {
+		return err
+	}
+	return uc.repo.UpsertMessageSummary(ctx, event)
 }
 
 func (uc *SESUsecase) GetEvents(ctx context.Context) ([]*sesevent.Event, error) {

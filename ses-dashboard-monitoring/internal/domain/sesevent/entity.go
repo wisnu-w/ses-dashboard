@@ -42,6 +42,18 @@ type MessageGroup struct {
 	HasClick     bool      `json:"has_click"`
 }
 
+type MessageSummary struct {
+	MessageID      string
+	Email          string
+	Subject        string
+	Source         string
+	LatestEvent    string
+	LatestStatus   string
+	StatusPriority int
+	FirstEventAt   time.Time
+	LastEventAt    time.Time
+}
+
 type DailyMetrics struct {
 	Date           string  `json:"date"`
 	TotalEvents    int     `json:"total_events"`
