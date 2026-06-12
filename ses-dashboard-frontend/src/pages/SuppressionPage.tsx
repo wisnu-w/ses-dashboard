@@ -30,6 +30,13 @@ interface SuppressionEntry {
   added_by_name?: string;
 }
 
+interface AWSStatusDetail {
+  email: string;
+  suppressed: boolean;
+  reason: string;
+  last_update: string;
+}
+
 const SuppressionPage = () => {
   const [suppressions, setSuppressions] = useState<SuppressionEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +60,8 @@ const SuppressionPage = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [syncIntervalMinutes, setSyncIntervalMinutes] = useState<number | null>(null);
+  const [statusDetail, setStatusDetail] = useState<AWSStatusDetail | null>(null);
+  const [checkingStatusEmail, setCheckingStatusEmail] = useState('');
 
   const showMessage = (text: string, type: 'success' | 'error', timeout = 3000) => {
     setMessage(text);
@@ -141,7 +150,7 @@ const SuppressionPage = () => {
         const error = await response.json();
         showMessage(error.error || 'Failed to add email', 'error', 5000);
       }
-    } catch (error) {
+    } catch {
       showMessage('Failed to add email', 'error', 5000);
     }
   };
@@ -162,28 +171,33 @@ const SuppressionPage = () => {
         const error = await response.json();
         showMessage(error.error || 'Failed to remove email', 'error', 5000);
       }
-    } catch (error) {
+    } catch {
       showMessage('Failed to remove email', 'error', 5000);
     }
   };
 
   const checkAWSStatus = async (email: string) => {
     try {
+      setCheckingStatusEmail(email);
       const response = await fetch(`/api/suppression/${encodeURIComponent(email)}/status`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       
       if (response.ok) {
-        const status = await response.json();
-        alert(`AWS Status: ${status.suppressed ? 'Suppressed' : 'Not Suppressed'}\\nReason: ${status.reason}`);
+        const status: AWSStatusDetail = await response.json();
+        setStatusDetail(status);
+        await loadSuppressions();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        showMessage(error.error || 'Failed to check AWS status', 'error', 5000);
       }
-    } catch (error) {
-      alert('Failed to check AWS status');
+    } catch {
+      showMessage('Failed to check AWS status', 'error', 5000);
+    } finally {
+      setCheckingStatusEmail('');
     }
   };
+
 
   const syncFromAWS = async () => {
     try {
@@ -200,7 +214,7 @@ const SuppressionPage = () => {
         const error = await response.json();
         showMessage(error.error || 'Failed to trigger sync', 'error', 5000);
       }
-    } catch (error) {
+    } catch {
       showMessage('Failed to trigger sync', 'error', 5000);
     } finally {
       setSyncing(false);
@@ -235,7 +249,7 @@ const SuppressionPage = () => {
         const error = await response.json();
         showMessage(error.error || 'Failed to bulk add emails', 'error', 5000);
       }
-    } catch (error) {
+    } catch {
       showMessage('Failed to bulk add emails', 'error', 5000);
     }
   };
@@ -273,7 +287,7 @@ const SuppressionPage = () => {
         const error = await response.json();
         showMessage(error.error || 'Failed to bulk remove emails', 'error', 5000);
       }
-    } catch (error) {
+    } catch {
       showMessage('Failed to bulk remove emails', 'error', 5000);
     }
   };
@@ -572,10 +586,15 @@ const SuppressionPage = () => {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => checkAWSStatus(suppression.email)}
-                            className="text-blue-600 hover:text-blue-800"
+                            disabled={checkingStatusEmail === suppression.email}
+                            className="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Check AWS Status"
                           >
-                            <Eye className="w-4 h-4" />
+                            {checkingStatusEmail === suppression.email ? (
+                              <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
                           </button>
                           <button
                             onClick={() => removeSuppression(suppression.email)}
@@ -662,6 +681,64 @@ const SuppressionPage = () => {
             </div>
           )}
         </div>
+
+        {statusDetail && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">AWS Suppression Status</h3>
+                  <p className="text-sm text-gray-500 mt-1 break-all">{statusDetail.email}</p>
+                </div>
+                <button
+                  onClick={() => setStatusDetail(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Status</p>
+                    <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
+                      statusDetail.suppressed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {statusDetail.suppressed ? 'Suppressed' : 'Not Suppressed'}
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Reason</p>
+                    <p className="text-sm font-medium text-gray-900 break-words">{statusDetail.reason || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Last Updated in AWS</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {statusDetail.last_update ? new Date(statusDetail.last_update).toLocaleString() : '—'}
+                  </p>
+                </div>
+
+                {!statusDetail.suppressed && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                    Local list refreshed. If email was stale in dashboard, it should disappear after reload completes.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => setStatusDetail(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bulk Action Modal */}
         {showBulkModal && (

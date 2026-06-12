@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import Layout from '../components/Layout';
 import MetricsGrid from '../components/MetricsGrid';
@@ -35,6 +35,12 @@ const DashboardPage = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const recentDailyMetrics = useMemo(() => dailyMetrics.slice(-7), [dailyMetrics]);
+  const engagementRate = useMemo(() => {
+    if (!metrics) return '0%';
+    return `${((metrics.open_count + metrics.click_count) / Math.max(metrics.delivery_count, 1) * 100).toFixed(1)}%`;
+  }, [metrics]);
 
   const handleRefresh = () => {
     loadData(true);
@@ -91,14 +97,14 @@ const DashboardPage = () => {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           <LineChartComponent
-            data={dailyMetrics.slice(-7)} // Last 7 days
+            data={recentDailyMetrics}
             title="Daily Send Volume"
             dataKey="send_count"
             xAxisKey="date"
           />
 
           <BarChartComponent
-            data={dailyMetrics.slice(-7)} // Last 7 days
+            data={recentDailyMetrics}
             title="Daily Delivery Performance"
             dataKey="delivery_count"
             xAxisKey="date"
@@ -126,7 +132,7 @@ const DashboardPage = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Engagement</h3>
             <div className="text-3xl font-bold text-purple-600">
-              {metrics ? `${((metrics.open_count + metrics.click_count) / Math.max(metrics.delivery_count, 1) * 100).toFixed(1)}%` : '0%'}
+              {engagementRate}
             </div>
             <p className="text-gray-600 mt-2">Opens + clicks rate</p>
           </div>

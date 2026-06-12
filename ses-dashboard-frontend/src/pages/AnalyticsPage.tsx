@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { TrendingUp, Calendar, BarChart3 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { LineChartComponent, BarChartComponent } from '../components/Charts';
@@ -39,6 +39,28 @@ const AnalyticsPage = () => {
     loadData();
   }, []);
 
+  const totalMonthlyEmails = useMemo(() => monthlyMetrics.reduce((sum, metric) => sum + metric.send_count, 0), [monthlyMetrics]);
+  const maxMonthlySend = useMemo(() => Math.max(...monthlyMetrics.map((metric) => metric.send_count), 0), [monthlyMetrics]);
+  const maxHourlySend = useMemo(() => Math.max(...hourlyMetrics.map((metric) => metric.send_count), 0), [hourlyMetrics]);
+  const avgDeliveryRate = useMemo(() => (
+    monthlyMetrics.length > 0
+      ? monthlyMetrics.reduce((sum, metric) => sum + (metric.delivery_count / Math.max(metric.send_count, 1)), 0) / monthlyMetrics.length * 100
+      : 0
+  ), [monthlyMetrics]);
+  const peakHourMetric = useMemo(() => (
+    hourlyMetrics.reduce(
+      (max, metric) => (metric.send_count > max.send_count ? metric : max),
+      hourlyMetrics[0] || { hour: '', send_count: 0 }
+    )
+  ), [hourlyMetrics]);
+  const peakHourValue = useMemo(() => parseHour(peakHourMetric.hour), [peakHourMetric]);
+  const peakHourLabel = useMemo(() => (
+    peakHourValue === null ? peakHourMetric.hour : `${peakHourValue}:00`
+  ), [peakHourMetric, peakHourValue]);
+  const sortedHourlyMetrics = useMemo(() => [...hourlyMetrics].sort((a, b) => b.send_count - a.send_count), [hourlyMetrics]);
+  const recentMonthlyMetrics = useMemo(() => monthlyMetrics.slice(-12), [monthlyMetrics]);
+  const recentMonthlyPerformance = useMemo(() => monthlyMetrics.slice(-6), [monthlyMetrics]);
+
   if (loading) {
     return (
       <Layout title="Analytics">
@@ -63,20 +85,6 @@ const AnalyticsPage = () => {
       </Layout>
     );
   }
-
-  const totalMonthlyEmails = monthlyMetrics.reduce((sum, metric) => sum + metric.send_count, 0);
-  const maxMonthlySend = Math.max(...monthlyMetrics.map((metric) => metric.send_count), 0);
-  const maxHourlySend = Math.max(...hourlyMetrics.map((metric) => metric.send_count), 0);
-  const avgDeliveryRate = monthlyMetrics.length > 0 
-    ? monthlyMetrics.reduce((sum, metric) => sum + (metric.delivery_count / Math.max(metric.send_count, 1)), 0) / monthlyMetrics.length * 100
-    : 0;
-  const peakHourMetric = hourlyMetrics.reduce(
-    (max, metric) => (metric.send_count > max.send_count ? metric : max),
-    hourlyMetrics[0] || { hour: '', send_count: 0 }
-  );
-  const peakHourValue = parseHour(peakHourMetric.hour);
-  const peakHourLabel = peakHourValue === null ? peakHourMetric.hour : `${peakHourValue}:00`;
-  const sortedHourlyMetrics = [...hourlyMetrics].sort((a, b) => b.send_count - a.send_count);
 
   return (
     <Layout title="Analytics">
@@ -129,7 +137,7 @@ const AnalyticsPage = () => {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <LineChartComponent
-            data={monthlyMetrics.slice(-12)}
+            data={recentMonthlyMetrics}
             title="Monthly Email Trends"
             dataKey="send_count"
             xAxisKey="month"
@@ -148,7 +156,7 @@ const AnalyticsPage = () => {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Performance</h3>
             <div className="space-y-4">
-              {monthlyMetrics.slice(-6).map((metric, index) => (
+              {recentMonthlyPerformance.map((metric, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">{metric.month}</span>
                   <div className="flex items-center space-x-4">
