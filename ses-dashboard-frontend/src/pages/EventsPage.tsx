@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, Calendar, Filter, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import EventsTable from '../components/EventsTable';
@@ -34,8 +34,17 @@ const EventsPage = () => {
   
   // Debounce search input to reduce API calls
   const debouncedSearch = useDebounce(search, 800);
+  const lastRequestKeyRef = useRef('');
+  const requestSequenceRef = useRef(0);
 
   const loadEvents = useCallback(async (page = 1, searchTerm = debouncedSearch, start = startDate, end = endDate) => {
+    const requestKey = `${page}|${pageSize}|${searchTerm}|${start}|${end}`;
+    if (lastRequestKeyRef.current === requestKey) return;
+
+    lastRequestKeyRef.current = requestKey;
+    const requestSequence = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestSequence;
+
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -58,6 +67,7 @@ const EventsPage = () => {
       }
       
       const data = await response.json();
+      if (requestSequenceRef.current !== requestSequence) return;
       setEventsData(data);
       setCurrentPage(page);
     } catch (error) {
@@ -65,19 +75,22 @@ const EventsPage = () => {
       // Fallback to eventsService if direct fetch fails
       try {
         const data = await eventsService.getEvents(page, pageSize, searchTerm, start, end);
+        if (requestSequenceRef.current !== requestSequence) return;
         setEventsData(data);
         setCurrentPage(page);
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError);
       }
     } finally {
-      setLoading(false);
+      if (requestSequenceRef.current === requestSequence) {
+        setLoading(false);
+      }
     }
   }, [debouncedSearch, startDate, endDate, pageSize]);
 
   const handleSearch = () => {
     setCurrentPage(1);
-    loadEvents(1);
+    loadEvents(1, search, startDate, endDate);
   };
 
   const clearFilters = () => {
@@ -85,30 +98,17 @@ const EventsPage = () => {
     setStartDate('');
     setEndDate('');
     setCurrentPage(1);
-    // Load events without filters
-    loadEvents(1, '', '', '');
+    lastRequestKeyRef.current = '';
   };
 
-  // Auto-search when debounced search changes
-  useEffect(() => {
-    if (debouncedSearch !== search) return; // Prevent initial load
-    setCurrentPage(1);
-    loadEvents(1);
-  }, [debouncedSearch, loadEvents]);
-
-  // Load events on date filter changes
   useEffect(() => {
     setCurrentPage(1);
-    loadEvents(1);
-  }, [startDate, endDate, loadEvents]);
-
-  // Initial load
-  useEffect(() => {
-    loadEvents();
-  }, []);
+    loadEvents(1, debouncedSearch, startDate, endDate);
+  }, [debouncedSearch, startDate, endDate, loadEvents]);
 
   const handlePageChange = (page: number) => {
-    loadEvents(page);
+    setCurrentPage(page);
+    loadEvents(page, debouncedSearch, startDate, endDate);
   };
 
   return (
