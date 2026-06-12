@@ -87,7 +87,7 @@ func (r *SuppressionRepository) processBatch(suppressions []*models.Suppression)
 // GetAll mengembalikan suppressions dengan pagination (hanya yang aktif)
 func (r *SuppressionRepository) GetAll(limit, offset int) ([]*models.Suppression, error) {
 	query := `
-		SELECT id, email, reason, source, suppression_type, aws_status, is_active, added_by, created_at, updated_at 
+		SELECT COALESCE(id, 0), email, reason, source, suppression_type, aws_status, is_active, COALESCE(added_by, 0), created_at, updated_at 
 		FROM suppressions 
 		WHERE is_active = true
 		ORDER BY updated_at DESC
@@ -124,7 +124,7 @@ func (r *SuppressionRepository) GetAllCount() (int, error) {
 // SearchSuppressions mencari suppressions dengan pagination (hanya yang aktif)
 func (r *SuppressionRepository) SearchSuppressions(searchTerm string, limit, offset int) ([]*models.Suppression, error) {
 	query := `
-		SELECT id, email, reason, source, suppression_type, aws_status, is_active, added_by, created_at, updated_at 
+		SELECT COALESCE(id, 0), email, reason, source, suppression_type, aws_status, is_active, COALESCE(added_by, 0), created_at, updated_at 
 		FROM suppressions 
 		WHERE is_active = true 
 		AND (email ILIKE $1 OR reason ILIKE $1 OR source ILIKE $1)
@@ -168,7 +168,7 @@ func (r *SuppressionRepository) GetSearchCount(searchTerm string) (int, error) {
 // GetByEmail mencari suppression berdasarkan email
 func (r *SuppressionRepository) GetByEmail(email string) (*models.Suppression, error) {
 	query := `
-		SELECT id, email, reason, source, suppression_type, aws_status, is_active, added_by, created_at, updated_at 
+		SELECT COALESCE(id, 0), email, reason, source, suppression_type, aws_status, is_active, COALESCE(added_by, 0), created_at, updated_at 
 		FROM suppressions 
 		WHERE email = $1
 	`
@@ -202,7 +202,7 @@ func (r *SuppressionRepository) HardDelete(email string) error {
 // GetBySource mengembalikan suppressions berdasarkan source
 func (r *SuppressionRepository) GetBySource(source string) ([]*models.Suppression, error) {
 	query := `
-		SELECT id, email, reason, source, suppression_type, aws_status, is_active, added_by, created_at, updated_at 
+		SELECT COALESCE(id, 0), email, reason, source, suppression_type, aws_status, is_active, COALESCE(added_by, 0), created_at, updated_at 
 		FROM suppressions 
 		WHERE source = $1 AND is_active = true
 		ORDER BY updated_at DESC

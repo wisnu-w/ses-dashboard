@@ -48,8 +48,8 @@ func (r *suppressionRepo) Remove(ctx context.Context, email string) error {
 
 func (r *suppressionRepo) GetAll(ctx context.Context, limit, offset int) ([]*suppression.SuppressionEntry, error) {
 	query := `
-		SELECT s.id, s.email, s.suppression_type, s.reason, s.aws_status, s.is_active, 
-		       s.added_by, COALESCE(u.username, 'System') as added_by_name, 
+		SELECT COALESCE(s.id, 0), s.email, s.suppression_type, s.reason, s.aws_status, s.is_active, 
+		       COALESCE(s.added_by, 0), COALESCE(u.username, 'System') as added_by_name, 
 		       s.created_at, s.updated_at
 		FROM suppressions s
 		LEFT JOIN users u ON s.added_by = u.id
@@ -88,8 +88,8 @@ func (r *suppressionRepo) GetCount(ctx context.Context) (int, error) {
 
 func (r *suppressionRepo) Search(ctx context.Context, query string, limit, offset int) ([]*suppression.SuppressionEntry, error) {
 	sqlQuery := `
-		SELECT s.id, s.email, s.suppression_type, s.reason, s.aws_status, s.is_active, 
-		       s.added_by, COALESCE(u.username, 'System') as added_by_name, 
+		SELECT COALESCE(s.id, 0), s.email, s.suppression_type, s.reason, s.aws_status, s.is_active, 
+		       COALESCE(s.added_by, 0), COALESCE(u.username, 'System') as added_by_name, 
 		       s.created_at, s.updated_at
 		FROM suppressions s
 		LEFT JOIN users u ON s.added_by = u.id
@@ -148,8 +148,8 @@ func (r *suppressionRepo) UpdateAWSStatus(ctx context.Context, email string, sta
 
 func (r *suppressionRepo) GetUnsyncedEntries(ctx context.Context) ([]*suppression.SuppressionEntry, error) {
 	query := `
-		SELECT id, email, suppression_type, reason, aws_status, is_active, 
-		       added_by, created_at, updated_at, synced_at
+		SELECT COALESCE(id, 0), email, suppression_type, reason, aws_status, is_active, 
+		       COALESCE(added_by, 0), created_at, updated_at, synced_at
 		FROM suppressions 
 		WHERE is_active = true AND (synced_at IS NULL OR updated_at > synced_at)
 		ORDER BY created_at ASC
