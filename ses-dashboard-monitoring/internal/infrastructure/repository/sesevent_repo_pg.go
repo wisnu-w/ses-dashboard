@@ -57,22 +57,22 @@ func (r *sesEventRepo) UpsertMessageSummary(ctx context.Context, e *sesevent.Eve
 			first_event_at, last_event_at, created_at, updated_at
 		)
 		VALUES (
-			$1, $2, $3, $4, $5,
+			$1, $2, $3, $4, $5::text,
 			CASE
-				WHEN $5 = 'Complaint' THEN 'Complaint'
-				WHEN $5 = 'Bounce' THEN 'Bounce'
-				WHEN $5 = 'Delivery' THEN 'Delivery'
-				WHEN $5 = 'Send' THEN 'Pending'
-				ELSE COALESCE($5, 'Unknown')
+				WHEN $5::text = 'Complaint' THEN 'Complaint'
+				WHEN $5::text = 'Bounce' THEN 'Bounce'
+				WHEN $5::text = 'Delivery' THEN 'Delivery'
+				WHEN $5::text = 'Send' THEN 'Pending'
+				ELSE COALESCE($5::text, 'Unknown')
 			END,
 			CASE
-				WHEN $5 = 'Complaint' THEN 40
-				WHEN $5 = 'Bounce' THEN 30
-				WHEN $5 = 'Delivery' THEN 20
-				WHEN $5 = 'Send' THEN 10
+				WHEN $5::text = 'Complaint' THEN 40
+				WHEN $5::text = 'Bounce' THEN 30
+				WHEN $5::text = 'Delivery' THEN 20
+				WHEN $5::text = 'Send' THEN 10
 				ELSE 0
 			END,
-			$6, $6, NOW(), NOW()
+			$6::timestamp, $6::timestamp, NOW(), NOW()
 		)
 		ON CONFLICT (message_id) DO UPDATE SET
 			email = CASE WHEN EXCLUDED.last_event_at >= ses_message_summaries.last_event_at THEN EXCLUDED.email ELSE ses_message_summaries.email END,
