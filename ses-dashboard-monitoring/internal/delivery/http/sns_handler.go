@@ -16,10 +16,11 @@ import (
 type SESEvent struct {
 	EventType string `json:"eventType"`
 	Mail      struct {
-		Timestamp     string   `json:"timestamp"`
-		MessageID     string   `json:"messageId"`
-		Source        string   `json:"source"`
-		Destination   []string `json:"destination"`
+		Timestamp     string                 `json:"timestamp"`
+		MessageID     string                 `json:"messageId"`
+		Source        string                 `json:"source"`
+		Destination   []string               `json:"destination"`
+		Tags          map[string]interface{} `json:"tags"`
 		CommonHeaders struct {
 			Subject string `json:"subject"`
 		} `json:"commonHeaders"`
@@ -110,19 +111,22 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		return
 	}
 
-	// Serialize recipients and tags
-	recipientsJSON, _ := json.Marshal(sesEvent.Mail.Destination)
-	tagsJSON, _ := json.Marshal(map[string]interface{}{}) // Placeholder, bisa ambil dari payload jika ada
+	if sesEvent.Mail.MessageID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing mail message ID"})
+		return
+	}
 
 	if len(sesEvent.Mail.Destination) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing destination recipients"})
 		return
 	}
 
-	// Create event from SES data
+	recipientsJSON, _ := json.Marshal(sesEvent.Mail.Destination)
+	tagsJSON, _ := json.Marshal(sesEvent.Mail.Tags)
+
 	event := &sesevent.Event{
 		MessageID:      sesEvent.Mail.MessageID,
-		Email:          sesEvent.Mail.Destination[0], // Primary recipient
+		Email:          sesEvent.Mail.Destination[0],
 		Subject:        sesEvent.Mail.CommonHeaders.Subject,
 		EventType:      sesEvent.EventType,
 		Status:         "SUCCESS",
@@ -132,7 +136,6 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		Tags:           string(tagsJSON),
 	}
 
-	// Populate based on event type
 	switch sesEvent.EventType {
 	case "Bounce":
 		if len(sesEvent.Bounce.BouncedRecipients) == 0 {
@@ -145,15 +148,24 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		event.BounceSubType = sesEvent.Bounce.BounceSubType
 		event.DiagnosticCode = sesEvent.Bounce.BouncedRecipients[0].DiagnosticCode
 		event.ReportingMTA = sesEvent.Bounce.ReportingMTA
+	case "Complaint":
+		event.Status = "COMPLAINT"
 	case "Delivery":
 		event.ProcessingTimeMillis = sesEvent.Delivery.ProcessingTimeMillis
 		event.SmtpResponse = sesEvent.Delivery.SmtpResponse
 		event.RemoteMtaIp = sesEvent.Delivery.RemoteMtaIp
 		event.ReportingMTA = sesEvent.Delivery.ReportingMTA
+	case "Send":
+		event.Status = "PENDING"
+	case "Open", "Click":
+		event.Status = "SUCCESS"
+	default:
+		event.Status = "UNKNOWN"
 	}
 
 	err = h.uc.HandleEvent(c.Request.Context(), event)
 	if err != nil {
+		log.Printf("failed to persist SES event type=%s message_id=%s: %v", event.EventType, event.MessageID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
