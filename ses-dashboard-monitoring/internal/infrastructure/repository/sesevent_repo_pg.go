@@ -645,25 +645,28 @@ func (r *sesEventRepo) GetHourlyMetrics(ctx context.Context, start, end *time.Ti
 
 func (r *sesEventRepo) GetEventTypeCounts(ctx context.Context) (map[string]int, error) {
 	query := `
-		SELECT event_type, COUNT(DISTINCT message_id)
-		FROM ses_events
-		GROUP BY event_type
+		SELECT 
+			COALESCE(SUM(send_count), 0),
+			COALESCE(SUM(delivery_count), 0),
+			COALESCE(SUM(bounce_count), 0),
+			COALESCE(SUM(complaint_count), 0),
+			COALESCE(SUM(open_count), 0),
+			COALESCE(SUM(click_count), 0)
+		FROM mv_ses_daily_summary
 	`
-	rows, err := r.db.QueryContext(ctx, query)
+	var send, delivery, bounce, complaint, open, click int
+	err := r.db.QueryRowContext(ctx, query).Scan(&send, &delivery, &bounce, &complaint, &open, &click)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	counts := make(map[string]int)
-	for rows.Next() {
-		var eventType string
-		var count int
-		err := rows.Scan(&eventType, &count)
-		if err != nil {
-			return nil, err
-		}
-		counts[eventType] = count
+	counts := map[string]int{
+		"Send":      send,
+		"Delivery":  delivery,
+		"Bounce":    bounce,
+		"Complaint": complaint,
+		"Open":      open,
+		"Click":     click,
 	}
 	return counts, nil
 }
