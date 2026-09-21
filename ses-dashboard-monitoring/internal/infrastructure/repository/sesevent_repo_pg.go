@@ -314,6 +314,16 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 }
 
 func (r *sesEventRepo) GetEventGroupCount(ctx context.Context, search, startDate, endDate string) (int, error) {
+	if search == "" && startDate == "" && endDate == "" {
+		// Use table statistics for fast unfiltered count estimation
+		estimateQuery := `SELECT reltuples::bigint FROM pg_class WHERE relname = 'ses_message_summaries'`
+		var count int
+		err := r.db.QueryRowContext(ctx, estimateQuery).Scan(&count)
+		if err == nil && count > 10000 { // If accurate enough estimate, return it immediately
+			return count, nil
+		}
+	}
+
 	query := `SELECT COUNT(*) FROM ses_message_summaries WHERE 1=1`
 	args := []interface{}{}
 	argIndex := 0
