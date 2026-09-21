@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_ses_message_summaries_search_composite;

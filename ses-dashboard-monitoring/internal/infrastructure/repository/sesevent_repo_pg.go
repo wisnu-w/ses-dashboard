@@ -266,7 +266,7 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 
 	if search != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
+		query += fmt.Sprintf(" AND (message_id || ' ' || email || ' ' || subject || ' ' || source) ILIKE $%d", argIndex)
 		args = append(args, "%"+search+"%")
 	}
 
@@ -330,7 +330,7 @@ func (r *sesEventRepo) GetEventGroupCount(ctx context.Context, search, startDate
 
 	if search != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND (message_id ILIKE $%d OR email ILIKE $%d OR subject ILIKE $%d OR source ILIKE $%d)", argIndex, argIndex, argIndex, argIndex)
+		query += fmt.Sprintf(" AND (message_id || ' ' || email || ' ' || subject || ' ' || source) ILIKE $%d", argIndex)
 		args = append(args, "%"+search+"%")
 	}
 
