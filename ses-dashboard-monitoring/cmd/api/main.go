@@ -70,10 +70,12 @@ func main() {
 		suppressionDBRepo,
 	)
 	cleanupService := services.NewCleanupService(settingsRepo, sesRepo)
+	mvRefreshService := services.NewMVRefreshService(sesRepo)
 
 	// Start background services
 	go syncService.StartBackgroundSync(context.Background())
 	go cleanupService.StartCleanupScheduler(context.Background())
+	go mvRefreshService.StartRefreshScheduler(context.Background())
 
 	sesUC := usecase.NewSESUsecase(sesRepo)
 	authUC := usecase.NewAuthUsecase(userRepo, cfg.App.JWTSecret)

@@ -415,7 +415,7 @@ func (r *sesEventRepo) GetFilteredEventCount(ctx context.Context, search, startD
 }
 
 func (r *sesEventRepo) GetEventCount(ctx context.Context) (int, error) {
-	query := `SELECT COUNT(DISTINCT message_id) FROM ses_events`
+	query := `SELECT COALESCE(SUM(total_events), 0) FROM mv_ses_daily_summary`
 	var count int
 	err := r.db.QueryRowContext(ctx, query).Scan(&count)
 	return count, err
@@ -468,11 +468,12 @@ func (r *sesEventRepo) GetEventsByType(ctx context.Context, eventType string) ([
 
 func (r *sesEventRepo) GetBounceRate(ctx context.Context) (float64, error) {
 	query := `
-		SELECT 
-			CASE 
-				WHEN (SELECT COUNT(DISTINCT message_id) FROM ses_events) = 0 THEN 0
-				ELSE (SELECT COUNT(DISTINCT message_id) FROM ses_events WHERE event_type = 'Bounce') * 100.0 / (SELECT COUNT(DISTINCT message_id) FROM ses_events)
-			END
+		WITH stats AS (
+			SELECT COALESCE(SUM(total_events), 0) as total, COALESCE(SUM(bounce_count), 0) as bounces
+			FROM mv_ses_daily_summary
+		)
+		SELECT CASE WHEN total = 0 THEN 0 ELSE (bounces * 100.0 / total) END
+		FROM stats
 	`
 	var rate float64
 	err := r.db.QueryRowContext(ctx, query).Scan(&rate)
@@ -481,11 +482,12 @@ func (r *sesEventRepo) GetBounceRate(ctx context.Context) (float64, error) {
 
 func (r *sesEventRepo) GetDeliveryRate(ctx context.Context) (float64, error) {
 	query := `
-		SELECT 
-			CASE 
-				WHEN (SELECT COUNT(DISTINCT message_id) FROM ses_events) = 0 THEN 0
-				ELSE (SELECT COUNT(DISTINCT message_id) FROM ses_events WHERE event_type = 'Delivery') * 100.0 / (SELECT COUNT(DISTINCT message_id) FROM ses_events)
-			END
+		WITH stats AS (
+			SELECT COALESCE(SUM(total_events), 0) as total, COALESCE(SUM(delivery_count), 0) as deliveries
+			FROM mv_ses_daily_summary
+		)
+		SELECT CASE WHEN total = 0 THEN 0 ELSE (deliveries * 100.0 / total) END
+		FROM stats
 	`
 	var rate float64
 	err := r.db.QueryRowContext(ctx, query).Scan(&rate)
@@ -495,34 +497,33 @@ func (r *sesEventRepo) GetDeliveryRate(ctx context.Context) (float64, error) {
 func (r *sesEventRepo) GetDailyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.DailyMetrics, error) {
 	query := `
 		SELECT 
-			DATE(event_timestamp) as date,
-			COUNT(DISTINCT message_id) as total_events,
-			COUNT(DISTINCT CASE WHEN event_type = 'Send' THEN message_id END) as send_count,
-			COUNT(DISTINCT CASE WHEN event_type = 'Delivery' THEN message_id END) as delivery_count,
-			COUNT(DISTINCT CASE WHEN event_type = 'Bounce' THEN message_id END) as bounce_count,
-			COUNT(DISTINCT CASE WHEN event_type = 'Complaint' THEN message_id END) as complaint_count,
-			COUNT(DISTINCT CASE WHEN event_type = 'Open' THEN message_id END) as open_count,
-			COUNT(DISTINCT CASE WHEN event_type = 'Click' THEN message_id END) as click_count,
-			CASE WHEN COUNT(DISTINCT message_id) = 0 THEN 0 ELSE (COUNT(DISTINCT CASE WHEN event_type = 'Bounce' THEN message_id END) * 100.0 / COUNT(DISTINCT message_id)) END as bounce_rate,
-			CASE WHEN COUNT(DISTINCT message_id) = 0 THEN 0 ELSE (COUNT(DISTINCT CASE WHEN event_type = 'Delivery' THEN message_id END) * 100.0 / COUNT(DISTINCT message_id)) END as delivery_rate
-		FROM ses_events
+			event_date as date,
+			total_events,
+			send_count,
+			delivery_count,
+			bounce_count,
+			complaint_count,
+			open_count,
+			click_count,
+			CASE WHEN total_events = 0 THEN 0 ELSE (bounce_count * 100.0 / total_events) END as bounce_rate,
+			CASE WHEN total_events = 0 THEN 0 ELSE (delivery_count * 100.0 / total_events) END as delivery_rate
+		FROM mv_ses_daily_summary
 	`
 	args := []interface{}{}
 	conditions := []string{}
 	if start != nil {
 		args = append(args, *start)
-		conditions = append(conditions, fmt.Sprintf("event_timestamp >= $%d", len(args)))
+		conditions = append(conditions, fmt.Sprintf("event_date >= DATE($%d)", len(args)))
 	}
 	if end != nil {
 		args = append(args, *end)
-		conditions = append(conditions, fmt.Sprintf("event_timestamp < $%d", len(args)))
+		conditions = append(conditions, fmt.Sprintf("event_date < DATE($%d)", len(args)))
 	}
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 	query += `
-		GROUP BY DATE(event_timestamp)
-		ORDER BY DATE(event_timestamp) DESC
+		ORDER BY event_date DESC
 	`
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -668,6 +669,12 @@ func (r *sesEventRepo) GetEventTypeCounts(ctx context.Context) (map[string]int, 
 }
 
 // DeleteOldEvents menghapus event logs yang lebih lama dari cutoff date
+func (r *sesEventRepo) RefreshDailySummary(ctx context.Context) error {
+	query := `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_ses_daily_summary`
+	_, err := r.db.ExecContext(ctx, query)
+	return err
+}
+
 func (r *sesEventRepo) DeleteOldEvents(ctx context.Context, cutoffDate time.Time) (int64, error) {
 	query := `DELETE FROM ses_events WHERE event_timestamp < $1`
 	result, err := r.db.ExecContext(ctx, query, cutoffDate)

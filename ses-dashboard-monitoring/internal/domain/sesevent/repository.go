@@ -25,4 +25,5 @@ type Repository interface {
 	GetHourlyMetrics(ctx context.Context, start, end *time.Time) ([]*HourlyMetrics, error)
 	GetEventTypeCounts(ctx context.Context) (map[string]int, error)
 	DeleteOldEvents(ctx context.Context, cutoffDate time.Time) (int64, error)
+	RefreshDailySummary(ctx context.Context) error
 }
