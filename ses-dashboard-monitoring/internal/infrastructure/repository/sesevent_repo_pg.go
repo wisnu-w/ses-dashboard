@@ -556,34 +556,34 @@ func (r *sesEventRepo) GetDailyMetrics(ctx context.Context, start, end *time.Tim
 func (r *sesEventRepo) GetMonthlyMetrics(ctx context.Context, start, end *time.Time) ([]*sesevent.MonthlyMetrics, error) {
 	query := `
 		SELECT 
-			TO_CHAR(DATE_TRUNC('month', event_timestamp), 'YYYY-MM') as month,
-			COUNT(*) as total_events,
-			SUM(CASE WHEN event_type = 'Send' THEN 1 ELSE 0 END) as send_count,
-			SUM(CASE WHEN event_type = 'Delivery' THEN 1 ELSE 0 END) as delivery_count,
-			SUM(CASE WHEN event_type = 'Bounce' THEN 1 ELSE 0 END) as bounce_count,
-			SUM(CASE WHEN event_type = 'Complaint' THEN 1 ELSE 0 END) as complaint_count,
-			SUM(CASE WHEN event_type = 'Open' THEN 1 ELSE 0 END) as open_count,
-			SUM(CASE WHEN event_type = 'Click' THEN 1 ELSE 0 END) as click_count,
-			CASE WHEN COUNT(*) = 0 THEN 0 ELSE (SUM(CASE WHEN event_type = 'Bounce' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) END as bounce_rate,
-			CASE WHEN COUNT(*) = 0 THEN 0 ELSE (SUM(CASE WHEN event_type = 'Delivery' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)) END as delivery_rate
-		FROM ses_events
+			TO_CHAR(DATE_TRUNC('month', event_date), 'YYYY-MM') as month,
+			COALESCE(SUM(total_events), 0) as total_events,
+			COALESCE(SUM(send_count), 0) as send_count,
+			COALESCE(SUM(delivery_count), 0) as delivery_count,
+			COALESCE(SUM(bounce_count), 0) as bounce_count,
+			COALESCE(SUM(complaint_count), 0) as complaint_count,
+			COALESCE(SUM(open_count), 0) as open_count,
+			COALESCE(SUM(click_count), 0) as click_count,
+			CASE WHEN COALESCE(SUM(total_events), 0) = 0 THEN 0 ELSE (COALESCE(SUM(bounce_count), 0) * 100.0 / COALESCE(SUM(total_events), 1)) END as bounce_rate,
+			CASE WHEN COALESCE(SUM(total_events), 0) = 0 THEN 0 ELSE (COALESCE(SUM(delivery_count), 0) * 100.0 / COALESCE(SUM(total_events), 1)) END as delivery_rate
+		FROM mv_ses_daily_summary
 	`
 	args := []interface{}{}
 	conditions := []string{}
 	if start != nil {
 		args = append(args, *start)
-		conditions = append(conditions, fmt.Sprintf("event_timestamp >= $%d", len(args)))
+		conditions = append(conditions, fmt.Sprintf("event_date >= DATE($%d)", len(args)))
 	}
 	if end != nil {
 		args = append(args, *end)
-		conditions = append(conditions, fmt.Sprintf("event_timestamp < $%d", len(args)))
+		conditions = append(conditions, fmt.Sprintf("event_date < DATE($%d)", len(args)))
 	}
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 	query += `
-		GROUP BY DATE_TRUNC('month', event_timestamp)
-		ORDER BY DATE_TRUNC('month', event_timestamp) DESC
+		GROUP BY DATE_TRUNC('month', event_date)
+		ORDER BY DATE_TRUNC('month', event_date) DESC
 	`
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
