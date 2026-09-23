@@ -57,8 +57,8 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
         }}
         className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group ${
           active
-            ? 'bg-blue-50 text-blue-700 font-semibold'
-            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm'
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
         }`}
       >
         <item.icon className={`w-5 h-5 mr-3 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
@@ -68,7 +68,7 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-hidden selection:bg-blue-100 selection:text-blue-900 font-sans">
+    <div className="h-screen bg-slate-50 flex overflow-hidden selection:bg-blue-100 selection:text-blue-900 font-sans">
       
       {/* Mobile Backdrop */}
       {sidebarOpen && (
@@ -78,11 +78,11 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col transform transition-transform duration-300 ease-in-out ${
-        sidebarOpen || desktopSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-ml-72'
+      {/* Sidebar - Fixed Height without Window Scroll */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col h-screen transform transition-transform duration-300 ease-in-out ${
+        sidebarOpen || desktopSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:-ml-72 lg:w-0 lg:overflow-hidden'
       }`}>
-        <div className="flex items-center h-20 px-8 border-b border-slate-100">
+        <div className="flex items-center h-20 px-8 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-sm shadow-blue-200">
               <Layers className="w-5 h-5 text-white" />
@@ -94,9 +94,10 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
+        {/* Scrollable Nav Area */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8 custom-scrollbar">
           <div>
-            <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Main Menu</p>
+            <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Main Menu</p>
             <nav className="space-y-1">
               {menuItems.map(item => <NavItem key={item.name} item={item} />)}
             </nav>
@@ -104,7 +105,7 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
 
           {isAdmin && (
             <div>
-              <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Admin</p>
+              <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Administration</p>
               <nav className="space-y-1">
                 {adminMenuItems.map(item => <NavItem key={item.name} item={item} />)}
               </nav>
@@ -112,32 +113,37 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-100">
-          <div className="flex items-center px-4 py-3 mb-2 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+        {/* Fixed Bottom Footer */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+          <div className="flex items-center px-4 py-3 mb-3 rounded-xl bg-white border border-slate-200 shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold text-sm">
               {user?.username?.charAt(0).toUpperCase() || 'A'}
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-slate-700">{user?.username || 'Admin'}</p>
-              <p className="text-xs text-slate-500 capitalize">{user?.role || 'User'}</p>
+            <div className="ml-3 truncate">
+              <p className="text-sm font-semibold text-slate-800 truncate">{user?.username || 'Admin'}</p>
+              <p className="text-xs font-medium text-slate-500 capitalize truncate">{user?.role || 'User'}</p>
             </div>
           </div>
           
-          <button onClick={() => setShowChangePassword(true)} className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-100 transition-colors group">
+          <button onClick={() => setShowChangePassword(true)} className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 transition-all group">
             <Settings className="w-4 h-4 mr-3 text-slate-400 group-hover:text-slate-600" />
             Password
           </button>
-          <button onClick={handleLogout} className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-rose-600 rounded-lg hover:bg-rose-50 transition-colors group mt-1">
+          <button onClick={handleLogout} className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-rose-600 rounded-lg hover:bg-rose-50 hover:shadow-sm border border-transparent hover:border-rose-100 transition-all group mt-1">
             <LogOut className="w-4 h-4 mr-3 text-rose-400 group-hover:text-rose-600" />
             Logout
           </button>
+          
+          <div className="mt-4 text-center">
+            <p className="text-[10px] text-slate-400 font-medium">© 2025 Wisnu. All rights reserved.</p>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <header className="shrink-0 sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200">
           <div className="flex items-center justify-between h-20 px-6 lg:px-10">
             <div className="flex items-center gap-4">
               <button 
@@ -157,8 +163,8 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
           </div>
         </header>
 
-        {/* Page Container */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10">
+        {/* Page Container - Scrollable */}
+        <main className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

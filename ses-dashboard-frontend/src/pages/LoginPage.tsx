@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock } from 'lucide-react';
+import { LogIn, Mail, Lock, Layers } from 'lucide-react';
 import { authService } from '../services/api';
 
 interface LoginPageProps {
@@ -24,77 +24,85 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
       
-      // Trigger custom event for same-tab token changes
       window.dispatchEvent(new Event('tokenChanged'));
       
-      // Call the callback if provided
       if (onLoginSuccess) {
         onLoginSuccess();
       }
       
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl mb-6 shadow-lg">
-              <Mail className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">SES Dashboard</h1>
-            <p className="text-gray-600">Sign in to access your email monitoring dashboard</p>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans selection:bg-blue-100 selection:text-blue-900">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 w-full h-96 bg-blue-600 skew-y-[-4deg] origin-top-left -z-10 shadow-xl opacity-90" />
+      <div className="absolute top-0 w-full h-96 bg-blue-700 skew-y-[-6deg] origin-top-left -z-20 opacity-50" />
+      
+      <div className="max-w-md w-full relative z-10">
+        
+        {/* Logo/Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl mb-6 shadow-xl shadow-blue-900/20 ring-1 ring-slate-900/5">
+            <Layers className="w-10 h-10 text-blue-600" />
           </div>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2">SES Dashboard</h1>
+          <p className="text-blue-100 font-medium">Monitor your email infrastructure</p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Login Card */}
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 sm:p-10 relative overflow-hidden">
+          
+          <h2 className="text-xl font-bold text-slate-800 mb-6">Welcome Back</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center">
-                <div className="w-2 h-2 bg-red-500 rounded-full mr-3"></div>
+              <div className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-xl flex items-center text-sm font-medium">
+                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full mr-3 shrink-0" />
                 {error}
               </div>
             )}
 
             <div>
-              <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-3">
+              <label htmlFor="username" className="block text-sm font-semibold text-slate-700 mb-2">
                 Username
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <LogIn className="h-5 w-5 text-gray-400" />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors">
+                  <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                 </div>
                 <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
-                  placeholder="Enter your username"
+                  className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal outline-none"
+                  placeholder="admin"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-3">
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
                 Password
               </label>
-              <div className="relative">
+              <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+                  <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                 </div>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white"
-                  placeholder="Enter your password"
+                  className="block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all bg-slate-50 focus:bg-white text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal outline-none"
+                  placeholder="••••••••"
                   required
                 />
               </div>
@@ -103,34 +111,41 @@ const LoginPage = ({ onLoginSuccess }: LoginPageProps) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-xl hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="w-full bg-blue-600 text-white py-3.5 px-4 rounded-xl hover:bg-blue-700 active:scale-[0.98] focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center font-bold transition-all shadow-lg shadow-blue-600/30 mt-4"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
               ) : (
                 <>
-                  <LogIn className="w-5 h-5 mr-2" />
                   Sign In
+                  <LogIn className="w-5 h-5 ml-2 opacity-80" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-              <p className="text-sm text-blue-700 font-medium mb-1">Demo Credentials</p>
-              <p className="text-sm text-blue-600">Username: <span className="font-mono font-semibold">admin</span></p>
-              <p className="text-sm text-blue-600">Password: <span className="font-mono font-semibold">password</span></p>
+          {/* Demo Hint */}
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-center gap-3">
+              <div className="bg-blue-100 p-2 rounded-lg shrink-0">
+                <Lock className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="text-sm">
+                <p className="text-slate-500">Default Demo Credentials</p>
+                <p className="font-semibold text-slate-700">admin / password</p>
+              </div>
             </div>
           </div>
+          
         </div>
         
-        {/* Copyright */}
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-500">
+        {/* Footer */}
+        <div className="text-center mt-10">
+          <p className="text-sm text-slate-500 font-medium">
             © 2025 Wisnu. All rights reserved.
           </p>
         </div>
+
       </div>
     </div>
   );
