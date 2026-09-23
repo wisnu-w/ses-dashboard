@@ -105,7 +105,13 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		if typ == "SubscriptionConfirmation" {
 			if subscribeURL, ok := payload["SubscribeURL"].(string); ok {
 				log.Printf("SNS Subscription Confirmation received. SubscribeURL: %s", subscribeURL)
-				c.JSON(http.StatusOK, gin.H{"status": "subscription confirmation logged"})
+				if resp, err := http.Get(subscribeURL); err == nil {
+					resp.Body.Close()
+					log.Printf("Successfully confirmed SNS subscription")
+				} else {
+					log.Printf("Failed to confirm SNS subscription: %v", err)
+				}
+				c.JSON(http.StatusOK, gin.H{"status": "subscription confirmed"})
 				return
 			}
 		}
