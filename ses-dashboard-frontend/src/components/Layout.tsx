@@ -33,12 +33,12 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Event Logs', icon: Mail, path: '/events' },
     { name: 'Analytics', icon: Search, path: '/analytics' },
-    { name: 'Suppression List', icon: Ban, path: '/suppression' },
+    { name: 'Suppression List', icon: Ban, path: '/admin/suppression' },
   ];
 
   const adminMenuItems = [
-    { name: 'Users', icon: Users, path: '/users' },
-    { name: 'Settings', icon: Settings, path: '/settings' },
+    { name: 'Users', icon: Users, path: '/admin/users' },
+    { name: 'Settings', icon: Settings, path: '/admin/settings' },
   ];
 
   const isAdmin = user?.role === 'admin';
