@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Mail, Send, CheckCircle, XCircle, AlertTriangle, Eye, MousePointer, ChevronDown, ChevronRight as ChevronRightIcon, Copy } from 'lucide-react';
 import type { Event, MessageGroup, PaginationInfo, RecipientDetail } from '../types/api';
 import { eventsService } from '../services/api';
