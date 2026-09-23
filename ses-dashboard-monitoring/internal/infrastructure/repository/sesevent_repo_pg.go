@@ -385,27 +385,33 @@ func (r *sesEventRepo) GetEventGroupCount(ctx context.Context, search, startDate
 		}
 	}
 
-	query := `SELECT COUNT(*) FROM ses_message_summaries WHERE 1=1`
+	// Use a capped count for filtered queries to avoid expensive full-index scans.
+	// We cap it at 10000 matches. If there are more, the user just sees 10000.
+	innerQuery := `SELECT 1 FROM ses_message_summaries WHERE 1=1`
 	args := []interface{}{}
 	argIndex := 0
 
 	if search != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND (message_id || ' ' || email || ' ' || subject || ' ' || source) ILIKE $%d", argIndex)
+		innerQuery += fmt.Sprintf(" AND (message_id || ' ' || email || ' ' || subject || ' ' || source) ILIKE $%d", argIndex)
 		args = append(args, "%"+search+"%")
 	}
 
 	if startDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND last_event_at >= $%d", argIndex)
+		innerQuery += fmt.Sprintf(" AND last_event_at >= $%d", argIndex)
 		args = append(args, startDate)
 	}
 
 	if endDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND last_event_at <= $%d", argIndex)
+		innerQuery += fmt.Sprintf(" AND last_event_at <= $%d", argIndex)
 		args = append(args, endDate+" 23:59:59")
 	}
+
+	innerQuery += " LIMIT 10000"
+
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM (%s) as capped`, innerQuery)
 
 	var count int
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
