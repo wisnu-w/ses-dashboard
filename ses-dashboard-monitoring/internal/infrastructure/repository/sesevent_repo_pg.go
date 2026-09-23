@@ -59,7 +59,7 @@ func (r *sesEventRepo) UpsertMessageSummary(ctx context.Context, e *sesevent.Eve
 			first_event_at, last_event_at, recipients_dict, created_at, updated_at
 		)
 		VALUES (
-			$1, $2, $3, $4, $5::text,
+			$1::text, $2::text, $3::text, $4::text, $5::text,
 			CASE
 				WHEN $5::text = 'Complaint' THEN 'Complaint'
 				WHEN $5::text = 'Bounce' THEN 'Bounce'
