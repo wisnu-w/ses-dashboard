@@ -85,12 +85,12 @@ const UsersPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-            <p className="text-gray-600 mt-1">Manage system users and their roles</p>
+            <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
+            <p className="text-slate-600 mt-1">Manage system users and their roles</p>
           </div>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            className="inline-flex items-center px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors duration-200"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add User
@@ -99,46 +99,46 @@ const UsersPage = () => {
 
         {/* Create User Form */}
         {showCreateForm && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New User</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Create New User</h3>
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Username</label>
                   <input
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
                   <input
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Role</label>
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
@@ -148,14 +148,14 @@ const UsersPage = () => {
               <div className="flex space-x-3">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors duration-200"
                 >
                   Create User
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                  className="px-4 py-2 bg-slate-300 text-slate-700 rounded-xl hover:bg-slate-400 transition-colors duration-200"
                 >
                   Cancel
                 </button>
@@ -165,9 +165,9 @@ const UsersPage = () => {
         )}
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+            <h3 className="text-lg font-semibold text-slate-900 flex items-center">
               <UsersIcon className="w-5 h-5 mr-2" />
               System Users
             </h3>
@@ -177,52 +177,52 @@ const UsersPage = () => {
             <div className="p-6">
               <div className="animate-pulse space-y-3">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-4 bg-gray-200 rounded"></div>
+                  <div key={i} className="h-4 bg-slate-200 rounded"></div>
                 ))}
               </div>
             </div>
           ) : users.length === 0 ? (
             <div className="p-10 text-center">
-              <UsersIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-700 font-medium">No users found</p>
-              <p className="text-sm text-gray-500 mt-1">Create your first user to get started.</p>
+              <UsersIcon className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-700 font-medium">No users found</p>
+              <p className="text-sm text-slate-500 mt-1">Create your first user to get started.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-[720px] w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+                <thead className="bg-slate-50 sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Username
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Email
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Role
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr key={user.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                         {user.username}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                         {user.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           user.role === 'admin' 
                             ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-gray-100 text-gray-800'
+                            : 'bg-slate-100 text-slate-800'
                         }`}>
                           {user.role}
                         </span>
@@ -276,23 +276,23 @@ const UsersPage = () => {
         {/* Reset Password Modal */}
         {showResetPassword && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Reset Password</h3>
+            <div className="bg-white rounded-xl p-6 w-96">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Reset Password</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">New Password</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter new password"
                   />
                 </div>
                 <div className="flex space-x-3">
                   <button
                     onClick={() => handleResetPassword(showResetPassword)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors duration-200"
                   >
                     Reset Password
                   </button>
@@ -301,7 +301,7 @@ const UsersPage = () => {
                       setShowResetPassword(null);
                       setNewPassword('');
                     }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors duration-200"
+                    className="px-4 py-2 bg-slate-300 text-slate-700 rounded-xl hover:bg-slate-400 transition-colors duration-200"
                   >
                     Cancel
                   </button>

@@ -334,7 +334,7 @@ const SuppressionPage = () => {
       <div className="space-y-6">
         {/* AWS Disabled Warning */}
         {isAWSDisabled && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
             <div className="flex items-center">
               <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
               <div>
@@ -350,15 +350,15 @@ const SuppressionPage = () => {
         )}
 
         {/* Sync Status Card */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+            <h2 className="text-lg font-semibold text-slate-900 flex items-center">
               <Activity className="w-5 h-5 mr-2 text-blue-600" />
               Background Sync Status
             </h2>
             <button
               onClick={loadSyncStatus}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-slate-400 hover:text-slate-600"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -370,33 +370,33 @@ const SuppressionPage = () => {
                 syncStatus?.in_progress ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'
               }`}></div>
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-slate-900">
                   {syncStatus?.in_progress ? 'Syncing...' : 'Idle'}
                 </p>
-                <p className="text-xs text-gray-500">Current Status</p>
+                <p className="text-xs text-slate-500">Current Status</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
-              <Clock className="w-4 h-4 text-gray-400" />
+              <Clock className="w-4 h-4 text-slate-400" />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-slate-900">
                   {syncStatus?.last_sync ? 
                     new Date(syncStatus.last_sync).toLocaleString() : 
                     'Never'
                   }
                 </p>
-                <p className="text-xs text-gray-500">Last Sync</p>
+                <p className="text-xs text-slate-500">Last Sync</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
-              <RefreshCw className="w-4 h-4 text-gray-400" />
+              <RefreshCw className="w-4 h-4 text-slate-400" />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-slate-900">
                   {nextSyncLabel}
                 </p>
-                <p className="text-xs text-gray-500">Next Auto Sync</p>
+                <p className="text-xs text-slate-500">Next Auto Sync</p>
               </div>
             </div>
           </div>
@@ -404,14 +404,14 @@ const SuppressionPage = () => {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Suppression List</h1>
-            <p className="text-gray-600 mt-1">Manage email suppression list</p>
+            <h1 className="text-2xl font-bold text-slate-900">Suppression List</h1>
+            <p className="text-slate-600 mt-1">Manage email suppression list</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={syncFromAWS}
               disabled={syncing || syncStatus?.in_progress || isAWSDisabled}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title={isAWSDisabled ? "AWS integration is disabled" : ""}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${(syncing || syncStatus?.in_progress) ? 'animate-spin' : ''}`} />
@@ -420,7 +420,7 @@ const SuppressionPage = () => {
             <button
               onClick={() => { setBulkAction('add'); setShowBulkModal(true); }}
               disabled={isAWSDisabled}
-              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title={isAWSDisabled ? "AWS integration is disabled" : ""}
             >
               <Upload className="w-4 h-4 mr-2" />
@@ -430,7 +430,7 @@ const SuppressionPage = () => {
               <button
                 onClick={() => { setBulkAction('remove'); setShowBulkModal(true); }}
                 disabled={isAWSDisabled}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={isAWSDisabled ? "AWS integration is disabled" : ""}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -440,7 +440,7 @@ const SuppressionPage = () => {
             <button
               onClick={() => setShowAddModal(true)}
               disabled={isAWSDisabled}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title={isAWSDisabled ? "AWS integration is disabled" : ""}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -450,7 +450,7 @@ const SuppressionPage = () => {
         </div>
 
         {message && (
-          <div className={`p-4 rounded-lg ${
+          <div className={`p-4 rounded-xl ${
             messageType === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
           }`}>
             {message}
@@ -458,37 +458,37 @@ const SuppressionPage = () => {
         )}
 
         {/* Search and Controls */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by email, reason, or source..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <label className="text-sm text-gray-600">Show:</label>
+                <label className="text-sm text-slate-600">Show:</label>
                 <select
                   value={limit}
                   onChange={(e) => {
                     setLimit(Number(e.target.value));
                     setPage(1);
                   }}
-                  className="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="border border-slate-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value={25}>25</option>
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                   <option value={500}>500</option>
                 </select>
-                <span className="text-sm text-gray-600">per page</span>
+                <span className="text-sm text-slate-600">per page</span>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-slate-600">
                 Showing {suppressions.length > 0 ? ((page - 1) * limit + 1) : 0} to {Math.min(page * limit, total)} of {total.toLocaleString()} entries
               </div>
             </div>
@@ -496,25 +496,25 @@ const SuppressionPage = () => {
         </div>
 
         {/* Suppression List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <div className="overflow-x-auto">
             <table className="min-w-[1100px] w-full">
-              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+              <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     <input
                       type="checkbox"
                       checked={selectedEmails.length === suppressions.length && suppressions.length > 0}
                       onChange={selectAllEmails}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AWS Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Added</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Reason</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">AWS Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Added</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -522,67 +522,67 @@ const SuppressionPage = () => {
                   [...Array(6)].map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td className="px-6 py-4">
-                        <div className="h-4 w-4 bg-gray-200 rounded" />
+                        <div className="h-4 w-4 bg-slate-200 rounded" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-40" />
+                        <div className="h-4 bg-slate-200 rounded w-40" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-20" />
+                        <div className="h-4 bg-slate-200 rounded w-20" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-48" />
+                        <div className="h-4 bg-slate-200 rounded w-48" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-24" />
+                        <div className="h-4 bg-slate-200 rounded w-24" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-24" />
+                        <div className="h-4 bg-slate-200 rounded w-24" />
                       </td>
                       <td className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded w-16" />
+                        <div className="h-4 bg-slate-200 rounded w-16" />
                       </td>
                     </tr>
                   ))
                 ) : suppressions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">No suppressed emails found</td>
+                    <td colSpan={7} className="px-6 py-4 text-center text-slate-500">No suppressed emails found</td>
                   </tr>
                 ) : (
                   suppressions.map((suppression) => (
-                    <tr key={suppression.id} className="hover:bg-gray-50">
+                    <tr key={suppression.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4">
                         <input
                           type="checkbox"
                           checked={selectedEmails.includes(suppression.email)}
                           onChange={() => toggleEmailSelection(suppression.email)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                         />
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{suppression.email}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{suppression.email}</td>
+                      <td className="px-6 py-4 text-sm text-slate-500">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           suppression.suppression_type === 'bounce' ? 'bg-red-100 text-red-800' :
                           suppression.suppression_type === 'complaint' ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-800'
+                          'bg-slate-100 text-slate-800'
                         }`}>
                           {suppression.suppression_type}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{suppression.reason}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-slate-500">{suppression.reason}</td>
+                      <td className="px-6 py-4 text-sm text-slate-500">
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           suppression.aws_status === 'suppressed' ? 'bg-red-100 text-red-800' :
                           suppression.aws_status === 'not_suppressed' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
+                          'bg-slate-100 text-slate-800'
                         }`}>
                           {suppression.aws_status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-slate-500">
                         {new Date(suppression.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-slate-500">
                         <div className="flex space-x-2">
                           <button
                             onClick={() => checkAWSStatus(suppression.email)}
@@ -614,19 +614,19 @@ const SuppressionPage = () => {
           
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setPage(1)}
                   disabled={!hasPrev}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   First
                 </button>
                 <button
                   onClick={() => setPage(page - 1)}
                   disabled={!hasPrev}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
@@ -652,8 +652,8 @@ const SuppressionPage = () => {
                       onClick={() => setPage(pageNum)}
                       className={`px-3 py-1 text-sm border rounded ${
                         page === pageNum
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border-gray-300 hover:bg-gray-50'
+                          ? 'bg-slate-800 text-white border-blue-600'
+                          : 'border-slate-300 hover:bg-slate-50'
                       }`}
                     >
                       {pageNum}
@@ -666,14 +666,14 @@ const SuppressionPage = () => {
                 <button
                   onClick={() => setPage(page + 1)}
                   disabled={!hasNext}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
                 <button
                   onClick={() => setPage(totalPages)}
                   disabled={!hasNext}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Last
                 </button>
@@ -684,15 +684,15 @@ const SuppressionPage = () => {
 
         {statusDetail && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+            <div className="bg-white rounded-xl p-6 w-full max-w-lg">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">AWS Suppression Status</h3>
-                  <p className="text-sm text-gray-500 mt-1 break-all">{statusDetail.email}</p>
+                  <h3 className="text-lg font-semibold text-slate-900">AWS Suppression Status</h3>
+                  <p className="text-sm text-slate-500 mt-1 break-all">{statusDetail.email}</p>
                 </div>
                 <button
                   onClick={() => setStatusDetail(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-slate-400 hover:text-slate-600"
                 >
                   ×
                 </button>
@@ -700,29 +700,29 @@ const SuppressionPage = () => {
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Status</p>
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Status</p>
                     <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
                       statusDetail.suppressed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                     }`}>
                       {statusDetail.suppressed ? 'Suppressed' : 'Not Suppressed'}
                     </span>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Reason</p>
-                    <p className="text-sm font-medium text-gray-900 break-words">{statusDetail.reason || '—'}</p>
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Reason</p>
+                    <p className="text-sm font-medium text-slate-900 break-words">{statusDetail.reason || '—'}</p>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Last Updated in AWS</p>
-                  <p className="text-sm font-medium text-gray-900">
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Last Updated in AWS</p>
+                  <p className="text-sm font-medium text-slate-900">
                     {statusDetail.last_update ? new Date(statusDetail.last_update).toLocaleString() : '—'}
                   </p>
                 </div>
 
                 {!statusDetail.suppressed && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
                     Local list refreshed. If email was stale in dashboard, it should disappear after reload completes.
                   </div>
                 )}
@@ -731,7 +731,7 @@ const SuppressionPage = () => {
               <div className="flex justify-end mt-6">
                 <button
                   onClick={() => setStatusDetail(null)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700"
                 >
                   Close
                 </button>
@@ -743,7 +743,7 @@ const SuppressionPage = () => {
         {/* Bulk Action Modal */}
         {showBulkModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl">
               <h3 className="text-lg font-semibold mb-4">
                 {bulkAction === 'add' ? 'Bulk Add Emails to Suppression List' : 'Bulk Remove Emails from Suppression List'}
               </h3>
@@ -751,24 +751,24 @@ const SuppressionPage = () => {
               {bulkAction === 'add' ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       Email Addresses (one per line)
                     </label>
                     <textarea
                       value={bulkEmails}
                       onChange={(e) => setBulkEmails(e.target.value)}
                       rows={8}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder={`user1@example.com\nuser2@example.com\nuser3@example.com`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Reason</label>
                     <input
                       type="text"
                       value={bulkReason}
                       onChange={(e) => setBulkReason(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="Reason for bulk suppression"
                     />
                   </div>
@@ -777,25 +777,25 @@ const SuppressionPage = () => {
                 <div className="space-y-4">
                   {selectedEmails.length > 0 ? (
                     <div>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-slate-600 mb-2">
                         Selected emails to remove ({selectedEmails.length}):
                       </p>
-                      <div className="max-h-40 overflow-y-auto bg-gray-50 p-3 rounded border">
+                      <div className="max-h-40 overflow-y-auto bg-slate-50 p-3 rounded border">
                         {selectedEmails.map(email => (
-                          <div key={email} className="text-sm text-gray-700">{email}</div>
+                          <div key={email} className="text-sm text-slate-700">{email}</div>
                         ))}
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
                         Email Addresses to Remove (one per line)
                       </label>
                       <textarea
                         value={bulkEmails}
                         onChange={(e) => setBulkEmails(e.target.value)}
                         rows={8}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder={`user1@example.com\nuser2@example.com\nuser3@example.com`}
                       />
                     </div>
@@ -810,13 +810,13 @@ const SuppressionPage = () => {
                     setBulkEmails('');
                     setBulkReason('');
                   }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={bulkAction === 'add' ? bulkAddEmails : bulkRemoveEmails}
-                  className={`px-4 py-2 text-white rounded-lg ${
+                  className={`px-4 py-2 text-white rounded-xl ${
                     bulkAction === 'add' 
                       ? 'bg-purple-600 hover:bg-purple-700' 
                       : 'bg-red-600 hover:bg-red-700'
@@ -832,26 +832,26 @@ const SuppressionPage = () => {
         {/* Add Email Modal */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">Add Email to Suppression List</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email Address</label>
                   <input
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="user@example.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Reason</label>
                   <input
                     type="text"
                     value={newReason}
                     onChange={(e) => setNewReason(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Reason for suppression"
                   />
                 </div>
@@ -859,13 +859,13 @@ const SuppressionPage = () => {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={addSuppression}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700"
                 >
                   Add Email
                 </button>

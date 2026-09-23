@@ -1,4 +1,4 @@
-import { TrendingUp, TrendingDown, Mail, Send, CheckCircle, XCircle, Eye, MousePointer } from 'lucide-react';
+import { TrendingUp, TrendingDown, Mail, Send, CheckCircle, XCircle, Eye, MousePointer, AlertCircle } from 'lucide-react';
 
 interface MetricCardProps {
   title: string;
@@ -13,23 +13,22 @@ interface MetricCardProps {
 
 const MetricCard = ({ title, value, icon, trend, color }: MetricCardProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow duration-200 relative overflow-hidden group">
+      {/* Subtle background glow effect */}
+      <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 duration-500 ${color.replace('text-', 'bg-').replace('100', '500')}`} />
+      
+      <div className="flex items-center justify-between relative z-10">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
+          <p className="text-3xl font-bold tracking-tight text-slate-800">{value}</p>
           {trend && (
-            <div className={`flex items-center mt-2 text-sm ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-              {trend.isPositive ? (
-                <TrendingUp className="w-4 h-4 mr-1" />
-              ) : (
-                <TrendingDown className="w-4 h-4 mr-1" />
-              )}
+            <div className={`flex items-center mt-3 text-sm font-medium ${trend.isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {trend.isPositive ? <TrendingUp className="w-4 h-4 mr-1.5" /> : <TrendingDown className="w-4 h-4 mr-1.5" />}
               <span>{Math.abs(trend.value)}%</span>
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
+        <div className={`p-4 rounded-2xl ${color}`}>
           {icon}
         </div>
       </div>
@@ -54,57 +53,57 @@ interface MetricsGridProps {
 const MetricsGrid = ({ metrics }: MetricsGridProps) => {
   const cards = [
     {
-      title: 'Total Events',
+      title: 'Total Log Events',
       value: metrics.total_events.toLocaleString(),
-      icon: <Mail className="w-6 h-6 text-white" />,
-      color: 'bg-blue-500',
+      icon: <Mail className="w-6 h-6" />,
+      color: 'bg-blue-50 text-blue-600',
     },
     {
-      title: 'Sent',
+      title: 'Total Sent',
       value: metrics.send_count.toLocaleString(),
-      icon: <Send className="w-6 h-6 text-white" />,
-      color: 'bg-green-500',
+      icon: <Send className="w-6 h-6" />,
+      color: 'bg-sky-50 text-sky-600',
     },
     {
-      title: 'Delivered',
+      title: 'Total Delivered',
       value: metrics.delivery_count.toLocaleString(),
-      icon: <CheckCircle className="w-6 h-6 text-white" />,
-      color: 'bg-emerald-500',
-    },
-    {
-      title: 'Bounced',
-      value: metrics.bounce_count.toLocaleString(),
-      icon: <XCircle className="w-6 h-6 text-white" />,
-      color: 'bg-red-500',
-    },
-    {
-      title: 'Complaints',
-      value: metrics.complaint_count.toLocaleString(),
-      icon: <XCircle className="w-6 h-6 text-white" />,
-      color: 'bg-orange-500',
-    },
-    {
-      title: 'Opens',
-      value: metrics.open_count.toLocaleString(),
-      icon: <Eye className="w-6 h-6 text-white" />,
-      color: 'bg-purple-500',
-    },
-    {
-      title: 'Clicks',
-      value: metrics.click_count.toLocaleString(),
-      icon: <MousePointer className="w-6 h-6 text-white" />,
-      color: 'bg-indigo-500',
+      icon: <CheckCircle className="w-6 h-6" />,
+      color: 'bg-emerald-50 text-emerald-600',
     },
     {
       title: 'Delivery Rate',
       value: `${metrics.delivery_rate.toFixed(1)}%`,
-      icon: <TrendingUp className="w-6 h-6 text-white" />,
-      color: 'bg-teal-500',
+      icon: <TrendingUp className="w-6 h-6" />,
+      color: 'bg-teal-50 text-teal-600',
+    },
+    {
+      title: 'Total Bounced',
+      value: metrics.bounce_count.toLocaleString(),
+      icon: <XCircle className="w-6 h-6" />,
+      color: 'bg-rose-50 text-rose-600',
+    },
+    {
+      title: 'Total Complaints',
+      value: metrics.complaint_count.toLocaleString(),
+      icon: <AlertCircle className="w-6 h-6" />,
+      color: 'bg-amber-50 text-amber-600',
+    },
+    {
+      title: 'Total Opens',
+      value: metrics.open_count.toLocaleString(),
+      icon: <Eye className="w-6 h-6" />,
+      color: 'bg-purple-50 text-purple-600',
+    },
+    {
+      title: 'Total Clicks',
+      value: metrics.click_count.toLocaleString(),
+      icon: <MousePointer className="w-6 h-6" />,
+      color: 'bg-indigo-50 text-indigo-600',
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {cards.map((card, index) => (
         <MetricCard key={index} {...card} />
       ))}

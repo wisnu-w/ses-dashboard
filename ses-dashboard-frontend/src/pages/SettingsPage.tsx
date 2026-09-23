@@ -201,11 +201,11 @@ const SettingsPage = () => {
       <Layout title="Settings">
         <div className="animate-pulse space-y-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div key={i} className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="h-4 bg-slate-200 rounded w-1/3 mb-4"></div>
               <div className="space-y-3">
-                <div className="h-10 bg-gray-200 rounded"></div>
-                <div className="h-10 bg-gray-200 rounded"></div>
+                <div className="h-10 bg-slate-200 rounded"></div>
+                <div className="h-10 bg-slate-200 rounded"></div>
               </div>
             </div>
           ))}
@@ -219,13 +219,13 @@ const SettingsPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-            <p className="text-gray-600 mt-1">Configure AWS integration and advanced features</p>
+            <h1 className="text-2xl font-bold text-slate-900">System Settings</h1>
+            <p className="text-slate-600 mt-1">Configure AWS integration and advanced features</p>
           </div>
         </div>
 
         {message && (
-          <div className={`p-4 rounded-lg ${
+          <div className={`p-4 rounded-xl ${
             message.type === 'success'
               ? 'bg-green-50 text-green-700'
               : message.type === 'info'
@@ -240,7 +240,7 @@ const SettingsPage = () => {
         )}
 
         {/* Timezone Settings */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center mb-6">
             <Settings className="w-6 h-6 text-purple-600 mr-3" />
             <h2 className="text-xl font-semibold">Timezone Settings</h2>
@@ -248,11 +248,11 @@ const SettingsPage = () => {
 
           <div className="space-y-6">
             <div className="max-w-md">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Application Timezone</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Application Timezone</label>
               <select
                 value={timezoneSettings.timezone}
                 onChange={(e) => setTimezoneSettings({...timezoneSettings, timezone: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
                 <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
@@ -263,17 +263,17 @@ const SettingsPage = () => {
                 <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
                 <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
               </select>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 This timezone will be used for displaying dates and times in metrics and monitoring handlers
               </p>
             </div>
           </div>
 
-          <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-end mt-8 pt-6 border-t border-slate-200">
             <button
               onClick={saveTimezoneSettings}
               disabled={loading}
-              className="inline-flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              className="inline-flex items-center px-6 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-2" />
               {loading ? 'Saving...' : 'Save Timezone Settings'}
@@ -282,7 +282,7 @@ const SettingsPage = () => {
         </div>
 
         {/* Retention Settings */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center mb-6">
             <Settings className="w-6 h-6 text-green-600 mr-3" />
             <h2 className="text-xl font-semibold">Event Log Retention</h2>
@@ -295,9 +295,9 @@ const SettingsPage = () => {
                 id="retention-enabled"
                 checked={retentionSettings.enabled}
                 onChange={(e) => setRetentionSettings({...retentionSettings, enabled: e.target.checked})}
-                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                className="h-4 w-4 text-green-600 focus:ring-green-500 border-slate-300 rounded"
               />
-              <label htmlFor="retention-enabled" className="ml-2 text-sm font-medium text-gray-700">
+              <label htmlFor="retention-enabled" className="ml-2 text-sm font-medium text-slate-700">
                 Enable automatic event log cleanup
               </label>
             </div>
@@ -305,11 +305,11 @@ const SettingsPage = () => {
             {retentionSettings.enabled && (
               <div className="pl-6 border-l-2 border-green-200">
                 <div className="max-w-md">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Retention Period</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Retention Period</label>
                   <select
                     value={retentionSettings.retention_days}
                     onChange={(e) => setRetentionSettings({...retentionSettings, retention_days: parseInt(e.target.value)})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   >
                     <option value={0}>Never delete (Keep forever)</option>
                     <option value={7}>7 days</option>
@@ -320,7 +320,7 @@ const SettingsPage = () => {
                     <option value={180}>6 months</option>
                     <option value={365}>1 year</option>
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     {retentionSettings.retention_days === 0 
                       ? 'Event logs will be kept forever'
                       : `Event logs older than ${retentionSettings.retention_days} days will be automatically deleted`
@@ -331,11 +331,11 @@ const SettingsPage = () => {
             )}
           </div>
 
-          <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-end mt-8 pt-6 border-t border-slate-200">
             <button
               onClick={saveRetentionSettings}
               disabled={loading}
-              className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-2" />
               {loading ? 'Saving...' : 'Save Retention Settings'}
@@ -344,7 +344,7 @@ const SettingsPage = () => {
         </div>
 
         {/* AWS Settings */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center mb-6">
             <Settings className="w-6 h-6 text-blue-600 mr-3" />
             <h2 className="text-xl font-semibold">AWS SES Integration</h2>
@@ -357,9 +357,9 @@ const SettingsPage = () => {
                 id="aws-enabled"
                 checked={settings.enabled}
                 onChange={(e) => setSettings({...settings, enabled: e.target.checked})}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
               />
-              <label htmlFor="aws-enabled" className="ml-2 text-sm font-medium text-gray-700">
+              <label htmlFor="aws-enabled" className="ml-2 text-sm font-medium text-slate-700">
                 Enable AWS SES Advanced Features
               </label>
             </div>
@@ -367,11 +367,11 @@ const SettingsPage = () => {
             {settings.enabled && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pl-6 border-l-2 border-blue-200">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">AWS Region</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">AWS Region</label>
                   <select
                     value={settings.region}
                     onChange={(e) => setSettings({...settings, region: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="us-east-1">US East (N. Virginia)</option>
                     <option value="us-west-2">US West (Oregon)</option>
@@ -382,33 +382,33 @@ const SettingsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">AWS Access Key</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">AWS Access Key</label>
                   <input
                     type="text"
                     value={settings.access_key}
                     onChange={(e) => setSettings({...settings, access_key: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="AKIA..."
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">AWS Secret Key</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">AWS Secret Key</label>
                   <input
                     type="password"
                     value={settings.secret_key}
                     onChange={(e) => setSettings({...settings, secret_key: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter secret key"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Auto Sync Interval</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Auto Sync Interval</label>
                   <select
                     value={settings.sync_interval}
                     onChange={(e) => setSettings({...settings, sync_interval: parseInt(e.target.value)})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value={1}>1 minute</option>
                     <option value={5}>5 minutes</option>
@@ -417,7 +417,7 @@ const SettingsPage = () => {
                     <option value={30}>30 minutes</option>
                     <option value={60}>1 hour</option>
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     How often to sync suppression list from AWS
                   </p>
                 </div>
@@ -426,7 +426,7 @@ const SettingsPage = () => {
                   <button
                     onClick={testConnection}
                     disabled={testing || !settings.access_key || !settings.secret_key}
-                    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-xl hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <TestTube className="w-4 h-4 mr-2" />
                     {testing ? 'Testing...' : 'Test Connection'}
@@ -436,11 +436,11 @@ const SettingsPage = () => {
             )}
           </div>
 
-          <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-end mt-8 pt-6 border-t border-slate-200">
             <button
               onClick={saveSettings}
               disabled={loading}
-              className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="inline-flex items-center px-6 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-2" />
               {loading ? 'Saving...' : 'Save Settings'}

@@ -116,12 +116,12 @@ const EventsPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Email Events</h1>
-            <p className="text-gray-600 mt-1">Detailed view of all SES email events</p>
+            <h1 className="text-2xl font-bold text-slate-900">Email Events</h1>
+            <p className="text-slate-600 mt-1">Detailed view of all SES email events</p>
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            className="inline-flex items-center px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors duration-200"
           >
             <Filter className="w-4 h-4 mr-2" />
             {showFilters ? 'Hide Filters' : 'Show Filters'}
@@ -130,42 +130,42 @@ const EventsPage = () => {
 
         {/* Search and Filter Section */}
         {showFilters && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search by email, subject, or source... (auto-search)"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -173,14 +173,14 @@ const EventsPage = () => {
             <div className="flex space-x-3 mt-4">
               <button
                 onClick={handleSearch}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center"
+                className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors duration-200 flex items-center"
               >
                 <Search className="w-4 h-4 mr-2" />
                 Search
               </button>
               <button
                 onClick={clearFilters}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors duration-200 flex items-center"
+                className="px-4 py-2 bg-slate-300 text-slate-700 rounded-xl hover:bg-slate-400 transition-colors duration-200 flex items-center"
               >
                 <X className="w-4 h-4 mr-2" />
                 Clear
@@ -206,11 +206,11 @@ const EventsPage = () => {
         )}
 
         {eventsData && eventsData.events && eventsData.events.length === 0 && !loading && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
             <div className="text-center">
-              <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No events found</h3>
-              <p className="text-gray-600 mb-4">
+              <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No events found</h3>
+              <p className="text-slate-600 mb-4">
                 {search || startDate || endDate 
                   ? 'No events match your search criteria. Try adjusting your filters.' 
                   : 'No events available at the moment.'}
@@ -218,7 +218,7 @@ const EventsPage = () => {
               {(search || startDate || endDate) && (
                 <button
                   onClick={clearFilters}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors duration-200"
                 >
                   Clear Filters
                 </button>
