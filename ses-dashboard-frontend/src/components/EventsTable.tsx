@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Mail, Send, CheckCircle, XCircle, AlertTriangle, Eye, MousePointer } from 'lucide-react';
-import type { Event, MessageGroup, PaginationInfo } from '../types/api';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight, Mail, Send, CheckCircle, XCircle, AlertTriangle, Eye, MousePointer, ChevronDown, ChevronRight as ChevronRightIcon, Copy } from 'lucide-react';
+import type { Event, MessageGroup, PaginationInfo, RecipientDetail } from '../types/api';
 import { eventsService } from '../services/api';
 
 interface EventsTableProps {
@@ -13,97 +13,79 @@ interface EventsTableProps {
 const getEventIcon = (eventType: string) => {
   const type = eventType?.toLowerCase() || '';
   switch (type) {
-    case 'send':
-      return <Send className="w-4 h-4 text-blue-500" />;
-    case 'delivery':
-      return <CheckCircle className="w-4 h-4 text-green-500" />;
-    case 'bounce':
-      return <XCircle className="w-4 h-4 text-red-500" />;
-    case 'complaint':
-      return <AlertTriangle className="w-4 h-4 text-orange-500" />;
-    case 'open':
-      return <Eye className="w-4 h-4 text-purple-500" />;
-    case 'click':
-      return <MousePointer className="w-4 h-4 text-indigo-500" />;
-    default:
-      return <Mail className="w-4 h-4 text-gray-500" />;
+    case 'send': return <Send className="w-4 h-4 text-blue-500" />;
+    case 'delivery': return <CheckCircle className="w-4 h-4 text-emerald-500" />;
+    case 'bounce': return <XCircle className="w-4 h-4 text-rose-500" />;
+    case 'complaint': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+    case 'open': return <Eye className="w-4 h-4 text-purple-500" />;
+    case 'click': return <MousePointer className="w-4 h-4 text-indigo-500" />;
+    default: return <Mail className="w-4 h-4 text-gray-500" />;
   }
 };
 
 const getEventTypeColor = (eventType: string) => {
   const type = eventType?.toLowerCase() || '';
   switch (type) {
-    case 'send':
-      return 'bg-blue-100 text-blue-800';
-    case 'delivery':
-      return 'bg-green-100 text-green-800';
-    case 'bounce':
-      return 'bg-red-100 text-red-800';
-    case 'complaint':
-      return 'bg-orange-100 text-orange-800';
-    case 'open':
-      return 'bg-purple-100 text-purple-800';
-    case 'click':
-      return 'bg-indigo-100 text-indigo-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
+    case 'send': return 'bg-blue-100 text-blue-800';
+    case 'delivery': return 'bg-emerald-100 text-emerald-800';
+    case 'bounce': return 'bg-rose-100 text-rose-800';
+    case 'complaint': return 'bg-amber-100 text-amber-800';
+    case 'open': return 'bg-purple-100 text-purple-800';
+    case 'click': return 'bg-indigo-100 text-indigo-800';
+    default: return 'bg-gray-100 text-gray-800';
   }
 };
 
 const getStatusColor = (status: string) => {
-  const normalizedStatus = status?.toLowerCase() || '';
-  switch (normalizedStatus) {
-    case 'complaint':
-      return 'bg-orange-100 text-orange-800';
-    case 'bounce':
-      return 'bg-red-100 text-red-800';
-    case 'delivery':
-      return 'bg-green-100 text-green-800';
-    case 'pending':
-    case 'send':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'open':
-      return 'bg-purple-100 text-purple-800';
-    case 'click':
-      return 'bg-indigo-100 text-indigo-800';
-    case 'success':
-      return 'bg-green-100 text-green-800';
-    case 'failed':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+  const s = status?.toLowerCase() || '';
+  if (s.includes('fail') || s.includes('bounce') || s.includes('error')) return 'bg-rose-50 text-rose-700 border border-rose-200';
+  if (s.includes('success') || s.includes('deliver')) return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+  if (s.includes('complaint')) return 'bg-amber-50 text-amber-700 border border-amber-200';
+  if (s.includes('pending')) return 'bg-blue-50 text-blue-700 border border-blue-200';
+  return 'bg-gray-50 text-gray-700 border border-gray-200';
 };
 
 const formatDate = (dateString: string) => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return 'Invalid Date';
-  return date.toLocaleString();
+  if (!dateString) return '—';
+  try {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }).format(date);
+  } catch (e) {
+    return dateString;
+  }
 };
 
-const EventsTable = ({ events, pagination, onPageChange, loading = false }: EventsTableProps) => {
+const EventsTable = ({ events, pagination, onPageChange, loading }: EventsTableProps) => {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [detailEvents, setDetailEvents] = useState<Event[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState('');
+  const [detailError, setDetailError] = useState<string | null>(null);
+  
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const currentGroup = useMemo(
-    () => events.find((event) => event.message_id === selectedMessageId) ?? null,
-    [events, selectedMessageId]
-  );
+  const toggleRow = (messageId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(messageId)) {
+      newExpanded.delete(messageId);
+    } else {
+      newExpanded.add(messageId);
+    }
+    setExpandedRows(newExpanded);
+  };
 
-  const openDetail = async (messageId: string) => {
+  const openDetail = async (messageId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedMessageId(messageId);
+    setDetailLoading(true);
+    setDetailError(null);
     try {
-      setSelectedMessageId(messageId);
-      setDetailLoading(true);
-      setDetailError('');
-      const response = await eventsService.getEventDetail(messageId);
-      setDetailEvents(response.events || []);
-    } catch (error) {
-      console.error('Failed to load event detail:', error);
-      setDetailError('Failed to load event timeline');
-      setDetailEvents([]);
+      const data = await eventsService.getEventDetail(messageId);
+      setDetailEvents(data.events || []);
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : 'Failed to load timeline');
     } finally {
       setDetailLoading(false);
     }
@@ -112,78 +94,162 @@ const EventsTable = ({ events, pagination, onPageChange, loading = false }: Even
   const closeDetail = () => {
     setSelectedMessageId(null);
     setDetailEvents([]);
-    setDetailError('');
+  };
+  
+  const copyToClipboard = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
   };
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-4 bg-gray-200 rounded"></div>
-            ))}
-          </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="animate-pulse space-y-4">
+          <div className="h-10 bg-gray-200 rounded w-full"></div>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-16 bg-gray-100 rounded w-full"></div>
+          ))}
         </div>
       </div>
     );
   }
 
+  if (!events || events.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+        <Mail className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-1">No events found</h3>
+        <p className="text-gray-500">There are no email events matching your current filters.</p>
+      </div>
+    );
+  }
+
+  const currentGroup = events.find(g => g.message_id === selectedMessageId);
+
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-semibold text-gray-900">Message Threads</h3>
-          <p className="text-sm text-gray-600 mt-1">Grouped by SES message ID for easier tracing</p>
-        </div>
-
-        <div className="overflow-hidden">
-          <table className="w-full table-fixed divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0 z-10">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[22%]">Message ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[22%]">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[24%]">Subject</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[14%]">Last Event</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[6%]">Action</th>
+                <th className="w-10 px-4 py-3"></th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject & Source</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Latest Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Event</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {events.map((event) => (
-                <tr key={event.message_id} className="hover:bg-gray-50 transition-colors duration-150">
-                  <td className="px-4 py-4 text-sm text-gray-900">
-                    <div className="truncate font-medium" title={event.message_id}>{event.message_id}</div>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900">
-                    <div className="truncate" title={event.email}>{event.email}</div>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900">
-                    <div className="truncate" title={event.subject || 'No subject'}>
-                      {event.subject || 'No subject'}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 truncate" title={event.source}>{event.source}</div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(event.latest_status)}`}>
-                      {event.latest_status || 'UNKNOWN'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(event.last_event_at)}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-500">
-                    <button
-                      onClick={() => openDetail(event.message_id)}
-                      className="inline-flex items-center px-2.5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-                      title="View timeline"
+              {events.map((event) => {
+                const isExpanded = expandedRows.has(event.message_id);
+                const recipients = event.recipients_detail || [];
+                const hasIssues = recipients.some(r => r.status === 'Bounce' || r.status === 'Complaint');
+                
+                return (
+                  <React.Fragment key={event.message_id}>
+                    <tr 
+                      className="hover:bg-slate-50 transition-colors cursor-pointer group"
+                      onClick={() => toggleRow(event.message_id)}
                     >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      <td className="px-4 py-4 text-gray-400">
+                        <ChevronRightIcon className={`w-5 h-5 transform transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">
+                        <div className="font-medium truncate max-w-xs" title={event.email}>{event.email}</div>
+                        {recipients.length > 1 && (
+                          <div className={`mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${hasIssues ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                            {recipients.length} recipients
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 mt-1 truncate max-w-xs" title={event.message_id}>{event.message_id}</div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900 max-w-xs">
+                        <div className="truncate font-medium" title={event.subject || 'No subject'}>
+                          {event.subject || 'No subject'}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 truncate" title={event.source}>{event.source}</div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(event.latest_status)}`}>
+                          {event.latest_status || 'UNKNOWN'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(event.last_event_at)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm text-gray-500">
+                        <button
+                          onClick={(e) => openDetail(event.message_id, e)}
+                          className="inline-flex items-center p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="View timeline"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                    
+                    {/* Expanded Row Panel */}
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={6} className="p-0 border-b-0">
+                          <div className="bg-slate-50/70 p-6 border-b border-gray-200 shadow-inner">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Recipient Details</h4>
+                            <div className="bg-white rounded border border-gray-200 overflow-hidden">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Diagnostic Code</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {recipients.length > 0 ? recipients.map((r, i) => (
+                                    <tr key={i} className="hover:bg-slate-50">
+                                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{r.email}</td>
+                                      <td className="px-4 py-3 text-sm text-gray-500">{r.type || 'To'}</td>
+                                      <td className="px-4 py-3 text-sm">
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${getStatusColor(r.status)}`}>
+                                          {r.status}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 text-sm text-gray-500 max-w-xs">
+                                        {r.diagnostic_code && r.diagnostic_code !== '-' ? (
+                                          <div className="flex items-center group">
+                                            <span className="truncate" title={r.diagnostic_code}>{r.diagnostic_code}</span>
+                                            <button 
+                                              onClick={(e) => copyToClipboard(r.diagnostic_code, e)} 
+                                              className="ml-2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-all"
+                                              title="Copy to clipboard"
+                                            >
+                                              <Copy className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400">—</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )) : (
+                                    <tr>
+                                      <td colSpan={4} className="px-4 py-3 text-sm text-gray-500 text-center italic">
+                                        No granular recipient data available (legacy data)
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

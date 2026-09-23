@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -23,8 +24,8 @@ func (r *sesEventRepo) Save(ctx context.Context, e *sesevent.Event) error {
 		INSERT INTO ses_events (
 			message_id, email, subject, event_type, status, reason, source, recipients,
 			event_timestamp, bounce_type, bounce_sub_type, diagnostic_code,
-			processing_time_millis, smtp_response, remote_mta_ip, reporting_mta, tags
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			processing_time_millis, smtp_response, remote_mta_ip, reporting_mta, tags, destination_type
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 	`
 	_, err := r.db.ExecContext(
 		ctx,
@@ -46,6 +47,7 @@ func (r *sesEventRepo) Save(ctx context.Context, e *sesevent.Event) error {
 		e.RemoteMtaIp,
 		e.ReportingMTA,
 		e.Tags,
+		e.DestinationType,
 	)
 	return err
 }
@@ -54,7 +56,7 @@ func (r *sesEventRepo) UpsertMessageSummary(ctx context.Context, e *sesevent.Eve
 	query := `
 		INSERT INTO ses_message_summaries (
 			message_id, email, subject, source, latest_event, latest_status, status_priority,
-			first_event_at, last_event_at, created_at, updated_at
+			first_event_at, last_event_at, recipients_dict, created_at, updated_at
 		)
 		VALUES (
 			$1, $2, $3, $4, $5::text,
@@ -72,7 +74,27 @@ func (r *sesEventRepo) UpsertMessageSummary(ctx context.Context, e *sesevent.Eve
 				WHEN $5::text = 'Send' THEN 10
 				ELSE 0
 			END,
-			$6::timestamp, $6::timestamp, NOW(), NOW()
+			$6::timestamp, $6::timestamp,
+			jsonb_build_object($2::text, jsonb_build_object(
+				'email', $2::text,
+				'status', CASE
+					WHEN $5::text = 'Complaint' THEN 'Complaint'
+					WHEN $5::text = 'Bounce' THEN 'Bounce'
+					WHEN $5::text = 'Delivery' THEN 'Delivery'
+					WHEN $5::text = 'Send' THEN 'Pending'
+					ELSE COALESCE($5::text, 'Unknown')
+				END,
+				'diagnostic_code', COALESCE(NULLIF($7::text, ''), '-'),
+				'type', COALESCE(NULLIF($8::text, ''), 'To'),
+				'status_priority', CASE
+					WHEN $5::text = 'Complaint' THEN 40
+					WHEN $5::text = 'Bounce' THEN 30
+					WHEN $5::text = 'Delivery' THEN 20
+					WHEN $5::text = 'Send' THEN 10
+					ELSE 0
+				END
+			)),
+			NOW(), NOW()
 		)
 		ON CONFLICT (message_id) DO UPDATE SET
 			email = CASE WHEN EXCLUDED.last_event_at >= ses_message_summaries.last_event_at THEN EXCLUDED.email ELSE ses_message_summaries.email END,
@@ -83,9 +105,29 @@ func (r *sesEventRepo) UpsertMessageSummary(ctx context.Context, e *sesevent.Eve
 			status_priority = GREATEST(ses_message_summaries.status_priority, EXCLUDED.status_priority),
 			first_event_at = LEAST(ses_message_summaries.first_event_at, EXCLUDED.first_event_at),
 			last_event_at = GREATEST(ses_message_summaries.last_event_at, EXCLUDED.last_event_at),
+			recipients_dict = ses_message_summaries.recipients_dict || jsonb_build_object(
+				$2::text,
+				COALESCE(ses_message_summaries.recipients_dict->($2::text), '{}'::jsonb) || jsonb_build_object(
+					'email', $2::text,
+					'status', CASE
+						WHEN EXCLUDED.status_priority >= COALESCE((ses_message_summaries.recipients_dict->($2::text)->>'status_priority')::int, 0)
+						THEN EXCLUDED.latest_status
+						ELSE COALESCE(ses_message_summaries.recipients_dict->($2::text)->>'status', EXCLUDED.latest_status)
+					END,
+					'diagnostic_code', CASE
+						WHEN $7::text != '' THEN $7::text
+						ELSE COALESCE(ses_message_summaries.recipients_dict->($2::text)->>'diagnostic_code', '-')
+					END,
+					'type', CASE
+						WHEN $8::text != '' THEN $8::text
+						ELSE COALESCE(ses_message_summaries.recipients_dict->($2::text)->>'type', 'To')
+					END,
+					'status_priority', GREATEST(EXCLUDED.status_priority, COALESCE((ses_message_summaries.recipients_dict->($2::text)->>'status_priority')::int, 0))
+				)
+			),
 			updated_at = NOW()
 	`
-	_, err := r.db.ExecContext(ctx, query, e.MessageID, e.Email, e.Subject, e.Source, e.EventType, e.EventTimestamp)
+	_, err := r.db.ExecContext(ctx, query, e.MessageID, e.Email, e.Subject, e.Source, e.EventType, e.EventTimestamp, e.DiagnosticCode, e.DestinationType)
 	return err
 }
 
@@ -257,7 +299,7 @@ func (r *sesEventRepo) GetEventGroupsWithFilter(ctx context.Context, limit, offs
 
 func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*sesevent.MessageGroup, error) {
 	query := `
-		SELECT message_id, email, subject, source, latest_status, latest_event, first_event_at, last_event_at
+		SELECT message_id, email, subject, source, latest_status, latest_event, first_event_at, last_event_at, COALESCE(recipients_dict, '{}'::jsonb)
 		FROM ses_message_summaries
 		WHERE 1=1
 	`
@@ -295,6 +337,7 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 	groups := []*sesevent.MessageGroup{}
 	for rows.Next() {
 		group := &sesevent.MessageGroup{}
+		var recipientsJSON string
 		err := rows.Scan(
 			&group.MessageID,
 			&group.Email,
@@ -304,10 +347,19 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 			&group.LatestEvent,
 			&group.FirstEventAt,
 			&group.LastEventAt,
+			&recipientsJSON,
 		)
 		if err != nil {
 			return nil, err
 		}
+		
+		var recDict map[string]sesevent.RecipientDetail
+		if err := json.Unmarshal([]byte(recipientsJSON), &recDict); err == nil {
+			for _, detail := range recDict {
+				group.RecipientsDetail = append(group.RecipientsDetail, detail)
+			}
+		}
+
 		groups = append(groups, group)
 	}
 	return groups, nil

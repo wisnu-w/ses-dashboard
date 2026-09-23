@@ -43,6 +43,14 @@ export interface PaginationInfo {
   hasPrev: boolean;
 }
 
+export interface RecipientDetail {
+  email: string;
+  status: string;
+  diagnostic_code: string;
+  type: string;
+  status_priority: number;
+}
+
 export interface MessageGroup {
   message_id: string;
   email: string;
@@ -59,6 +67,7 @@ export interface MessageGroup {
   has_delivery: boolean;
   has_open: boolean;
   has_click: boolean;
+  recipients_detail?: RecipientDetail[];
 }
 
 export interface EventsResponse {

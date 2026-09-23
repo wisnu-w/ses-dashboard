@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"ses-monitoring/internal/config"
@@ -22,7 +23,10 @@ type SESEvent struct {
 		Destination   []string               `json:"destination"`
 		Tags          map[string]interface{} `json:"tags"`
 		CommonHeaders struct {
-			Subject string `json:"subject"`
+			Subject string   `json:"subject"`
+			To      []string `json:"to"`
+			Cc      []string `json:"cc"`
+			Bcc     []string `json:"bcc"`
 		} `json:"commonHeaders"`
 	} `json:"mail"`
 	Bounce struct {
@@ -37,6 +41,11 @@ type SESEvent struct {
 		Timestamp    string `json:"timestamp"`
 		ReportingMTA string `json:"reportingMTA"`
 	} `json:"bounce"`
+	Complaint struct {
+		ComplainedRecipients []struct {
+			EmailAddress string `json:"emailAddress"`
+		} `json:"complainedRecipients"`
+	} `json:"complaint"`
 	Delivery struct {
 		Timestamp            string   `json:"timestamp"`
 		ProcessingTimeMillis int      `json:"processingTimeMillis"`
@@ -61,6 +70,30 @@ func NewSNSHandler(uc *usecase.SESUsecase, cfg *config.Config) *SNSHandler {
 	}
 }
 
+func getDestinationType(email string, headers struct {
+	Subject string   `json:"subject"`
+	To      []string `json:"to"`
+	Cc      []string `json:"cc"`
+	Bcc     []string `json:"bcc"`
+}) string {
+	for _, to := range headers.To {
+		if strings.Contains(to, email) {
+			return "To"
+		}
+	}
+	for _, cc := range headers.Cc {
+		if strings.Contains(cc, email) {
+			return "Cc"
+		}
+	}
+	for _, bcc := range headers.Bcc {
+		if strings.Contains(bcc, email) {
+			return "Bcc"
+		}
+	}
+	return "To"
+}
+
 func (h *SNSHandler) Handle(c *gin.Context) {
 	var payload map[string]interface{}
 	if err := c.BindJSON(&payload); err != nil {
@@ -68,13 +101,10 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		return
 	}
 
-	// Check for SNS Subscription Confirmation
 	if typ, ok := payload["Type"].(string); ok {
 		if typ == "SubscriptionConfirmation" {
 			if subscribeURL, ok := payload["SubscribeURL"].(string); ok {
 				log.Printf("SNS Subscription Confirmation received. SubscribeURL: %s", subscribeURL)
-				// Optionally, you can automatically confirm by making a GET request to subscribeURL
-				// But for now, just log it
 				c.JSON(http.StatusOK, gin.H{"status": "subscription confirmation logged"})
 				return
 			}
@@ -104,7 +134,6 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		return
 	}
 
-	// Parse timestamps
 	eventTimestamp, err := time.Parse(time.RFC3339, sesEvent.Mail.Timestamp)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid mail timestamp"})
@@ -124,9 +153,8 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 	recipientsJSON, _ := json.Marshal(sesEvent.Mail.Destination)
 	tagsJSON, _ := json.Marshal(sesEvent.Mail.Tags)
 
-	event := &sesevent.Event{
+	baseEvent := sesevent.Event{
 		MessageID:      sesEvent.Mail.MessageID,
-		Email:          sesEvent.Mail.Destination[0],
 		Subject:        sesEvent.Mail.CommonHeaders.Subject,
 		EventType:      sesEvent.EventType,
 		Status:         "SUCCESS",
@@ -136,38 +164,63 @@ func (h *SNSHandler) Handle(c *gin.Context) {
 		Tags:           string(tagsJSON),
 	}
 
+	var eventsToSave []*sesevent.Event
+
 	switch sesEvent.EventType {
 	case "Bounce":
-		if len(sesEvent.Bounce.BouncedRecipients) == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing bounce recipients"})
-			return
+		for _, rec := range sesEvent.Bounce.BouncedRecipients {
+			e := baseEvent
+			e.Email = rec.EmailAddress
+			e.Status = "FAILED"
+			e.Reason = rec.DiagnosticCode
+			e.BounceType = sesEvent.Bounce.BounceType
+			e.BounceSubType = sesEvent.Bounce.BounceSubType
+			e.DiagnosticCode = rec.DiagnosticCode
+			e.ReportingMTA = sesEvent.Bounce.ReportingMTA
+			e.DestinationType = getDestinationType(rec.EmailAddress, sesEvent.Mail.CommonHeaders)
+			eventsToSave = append(eventsToSave, &e)
 		}
-		event.Status = "FAILED"
-		event.Reason = sesEvent.Bounce.BouncedRecipients[0].DiagnosticCode
-		event.BounceType = sesEvent.Bounce.BounceType
-		event.BounceSubType = sesEvent.Bounce.BounceSubType
-		event.DiagnosticCode = sesEvent.Bounce.BouncedRecipients[0].DiagnosticCode
-		event.ReportingMTA = sesEvent.Bounce.ReportingMTA
 	case "Complaint":
-		event.Status = "COMPLAINT"
+		for _, rec := range sesEvent.Complaint.ComplainedRecipients {
+			e := baseEvent
+			e.Email = rec.EmailAddress
+			e.Status = "COMPLAINT"
+			e.DestinationType = getDestinationType(rec.EmailAddress, sesEvent.Mail.CommonHeaders)
+			eventsToSave = append(eventsToSave, &e)
+		}
 	case "Delivery":
-		event.ProcessingTimeMillis = sesEvent.Delivery.ProcessingTimeMillis
-		event.SmtpResponse = sesEvent.Delivery.SmtpResponse
-		event.RemoteMtaIp = sesEvent.Delivery.RemoteMtaIp
-		event.ReportingMTA = sesEvent.Delivery.ReportingMTA
+		for _, rec := range sesEvent.Delivery.Recipients {
+			e := baseEvent
+			e.Email = rec
+			e.ProcessingTimeMillis = sesEvent.Delivery.ProcessingTimeMillis
+			e.SmtpResponse = sesEvent.Delivery.SmtpResponse
+			e.RemoteMtaIp = sesEvent.Delivery.RemoteMtaIp
+			e.ReportingMTA = sesEvent.Delivery.ReportingMTA
+			e.DestinationType = getDestinationType(rec, sesEvent.Mail.CommonHeaders)
+			eventsToSave = append(eventsToSave, &e)
+		}
 	case "Send":
-		event.Status = "PENDING"
+		baseEvent.Status = "PENDING"
 	case "Open", "Click":
-		event.Status = "SUCCESS"
+		baseEvent.Status = "SUCCESS"
 	default:
-		event.Status = "UNKNOWN"
+		baseEvent.Status = "UNKNOWN"
 	}
 
-	err = h.uc.HandleEvent(c.Request.Context(), event)
-	if err != nil {
-		log.Printf("failed to persist SES event type=%s message_id=%s: %v", event.EventType, event.MessageID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	if len(eventsToSave) == 0 {
+		for _, rec := range sesEvent.Mail.Destination {
+			e := baseEvent
+			e.Email = rec
+			e.DestinationType = getDestinationType(rec, sesEvent.Mail.CommonHeaders)
+			eventsToSave = append(eventsToSave, &e)
+		}
 	}
+
+	for _, e := range eventsToSave {
+		if err := h.uc.HandleEvent(c.Request.Context(), e); err != nil {
+			log.Printf("failed to persist SES event type=%s message_id=%s: %v", e.EventType, e.MessageID, err)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

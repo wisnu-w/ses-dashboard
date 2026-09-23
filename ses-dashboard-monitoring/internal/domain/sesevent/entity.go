@@ -22,24 +22,34 @@ type Event struct {
 	RemoteMtaIp          string
 	ReportingMTA         string
 	Tags                 string // JSON map
+	DestinationType      string
+}
+
+type RecipientDetail struct {
+	Email          string `json:"email"`
+	Status         string `json:"status"`
+	DiagnosticCode string `json:"diagnostic_code"`
+	Type           string `json:"type"`
+	StatusPriority int    `json:"status_priority"`
 }
 
 type MessageGroup struct {
-	MessageID    string    `json:"message_id"`
-	Email        string    `json:"email"`
-	Subject      string    `json:"subject"`
-	Source       string    `json:"source"`
-	LatestStatus string    `json:"latest_status"`
-	LatestEvent  string    `json:"latest_event"`
-	EventTypes   []string  `json:"event_types"`
-	EventCount   int       `json:"event_count"`
-	FirstEventAt time.Time `json:"first_event_at"`
-	LastEventAt  time.Time `json:"last_event_at"`
-	HasBounce    bool      `json:"has_bounce"`
-	HasComplaint bool      `json:"has_complaint"`
-	HasDelivery  bool      `json:"has_delivery"`
-	HasOpen      bool      `json:"has_open"`
-	HasClick     bool      `json:"has_click"`
+	MessageID        string            `json:"message_id"`
+	Email            string            `json:"email"`
+	Subject          string            `json:"subject"`
+	Source           string            `json:"source"`
+	LatestStatus     string            `json:"latest_status"`
+	LatestEvent      string            `json:"latest_event"`
+	EventTypes       []string          `json:"event_types"`
+	EventCount       int               `json:"event_count"`
+	FirstEventAt     time.Time         `json:"first_event_at"`
+	LastEventAt      time.Time         `json:"last_event_at"`
+	HasBounce        bool              `json:"has_bounce"`
+	HasComplaint     bool              `json:"has_complaint"`
+	HasDelivery      bool              `json:"has_delivery"`
+	HasOpen          bool              `json:"has_open"`
+	HasClick         bool              `json:"has_click"`
+	RecipientsDetail []RecipientDetail `json:"recipients_detail"`
 }
 
 type MessageSummary struct {
