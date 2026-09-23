@@ -3,13 +3,16 @@ package services
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"ses-monitoring/internal/domain/sesevent"
 )
 
 type MVRefreshService struct {
-	sesRepo sesevent.Repository
+	sesRepo    sesevent.Repository
+	mu         sync.Mutex
+	refreshing bool
 }
 
 func NewMVRefreshService(sesRepo sesevent.Repository) *MVRefreshService {
@@ -42,9 +45,28 @@ func (s *MVRefreshService) StartRefreshScheduler(ctx context.Context) {
 
 // RunRefresh menjalankan perintah REFRESH MATERIALIZED VIEW CONCURRENTLY
 func (s *MVRefreshService) RunRefresh(ctx context.Context) {
+	s.mu.Lock()
+	if s.refreshing {
+		s.mu.Unlock()
+		log.Println("Refresh MV already in progress, skipping...")
+		return
+	}
+	s.refreshing = true
+	s.mu.Unlock()
+
+	defer func() {
+		s.mu.Lock()
+		s.refreshing = false
+		s.mu.Unlock()
+	}()
+
 	log.Println("Starting Materialized View refresh (mv_ses_daily_summary)...")
 
-	err := s.sesRepo.RefreshDailySummary(ctx)
+	// Set timeout agar tidak nge-hang jika DB lock terlalu lama
+	refreshCtx, cancel := context.WithTimeout(ctx, 4*time.Minute)
+	defer cancel()
+
+	err := s.sesRepo.RefreshDailySummary(refreshCtx)
 	if err != nil {
 		log.Printf("Failed to refresh mv_ses_daily_summary: %v", err)
 		return

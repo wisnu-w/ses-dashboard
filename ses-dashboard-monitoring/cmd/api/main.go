@@ -24,10 +24,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
 
 	_ "ses-monitoring/docs"
 	"ses-monitoring/internal/config"
-	"ses-monitoring/internal/delivery/http"
+	apihttp "ses-monitoring/internal/delivery/http"
 	"ses-monitoring/internal/infrastructure/database"
 	"ses-monitoring/internal/infrastructure/repository"
 	"ses-monitoring/internal/services"
@@ -80,13 +82,13 @@ func main() {
 	sesUC := usecase.NewSESUsecase(sesRepo)
 	authUC := usecase.NewAuthUsecase(userRepo, cfg.App.JWTSecret)
 
-	snsHandler := http.NewSNSHandler(sesUC, cfg)
-	monitoringHandler := http.NewMonitoringHandler(sesUC, settingsRepo)
-	authHandler := http.NewAuthHandler(authUC)
-	userHandler := http.NewUserHandler(authUC)
-	settingsHandler := http.NewSettingsHandler(settingsRepo, suppressionDBRepo)
-	suppressionHandler := http.NewSuppressionHandler(settingsRepo, suppressionRepo, suppressionDBRepo, syncService)
-	healthHandler := http.NewHealthHandler()
+	snsHandler := apihttp.NewSNSHandler(sesUC, cfg)
+	monitoringHandler := apihttp.NewMonitoringHandler(sesUC, settingsRepo)
+	authHandler := apihttp.NewAuthHandler(authUC)
+	userHandler := apihttp.NewUserHandler(authUC)
+	settingsHandler := apihttp.NewSettingsHandler(settingsRepo, suppressionDBRepo)
+	suppressionHandler := apihttp.NewSuppressionHandler(settingsRepo, suppressionRepo, suppressionDBRepo, syncService)
+	healthHandler := apihttp.NewHealthHandler()
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -132,7 +134,7 @@ func main() {
 	// PROTECTED ROUTES
 	// ========================
 	api := r.Group("/api")
-	api.Use(http.JWTAuthMiddleware([]byte(cfg.App.JWTSecret)))
+	api.Use(apihttp.JWTAuthMiddleware([]byte(cfg.App.JWTSecret)))
 	api.Use(func(c *gin.Context) {
 		c.Set("monitoring_handler", monitoringHandler)
 		c.Next()
@@ -147,7 +149,7 @@ func main() {
 
 		// User management routes (admin only)
 		admin := api.Group("")
-		admin.Use(http.AdminMiddleware())
+		admin.Use(apihttp.AdminMiddleware())
 		{
 			admin.POST("/users", userHandler.CreateUser)
 			admin.GET("/users", userHandler.GetUsers)
@@ -180,5 +182,14 @@ func main() {
 		api.PUT("/change-password", userHandler.ChangePassword)
 	}
 
-	r.Run(fmt.Sprintf(":%d", cfg.App.Port))
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.App.Port),
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		panic(fmt.Sprintf("listen: %s\n", err))
+	}
 }
