@@ -298,8 +298,10 @@ func (r *sesEventRepo) GetEventGroupsWithFilter(ctx context.Context, limit, offs
 }
 
 func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, search, startDate, endDate string) ([]*sesevent.MessageGroup, error) {
-	query := `
-		SELECT message_id, email, subject, source, latest_status, latest_event, first_event_at, last_event_at, COALESCE(recipients_dict, '{}'::jsonb)
+	// Use deferred join (late row lookup) to prevent PostgreSQL from doing a sequential scan + sort
+	// on the bloated table, which contains the wide JSONB column recipients_dict.
+	innerQuery := `
+		SELECT message_id
 		FROM ses_message_summaries
 		WHERE 1=1
 	`
@@ -308,25 +310,32 @@ func (r *sesEventRepo) getEventGroups(ctx context.Context, limit, offset int, se
 
 	if search != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND (message_id || ' ' || email || ' ' || subject || ' ' || source) ILIKE $%d", argIndex)
+		innerQuery += fmt.Sprintf(" AND (message_id || ' ' || email || ' ' || subject || ' ' || source) ILIKE $%d", argIndex)
 		args = append(args, "%"+search+"%")
 	}
 
 	if startDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND last_event_at >= $%d", argIndex)
+		innerQuery += fmt.Sprintf(" AND last_event_at >= $%d", argIndex)
 		args = append(args, startDate)
 	}
 
 	if endDate != "" {
 		argIndex++
-		query += fmt.Sprintf(" AND last_event_at <= $%d", argIndex)
+		innerQuery += fmt.Sprintf(" AND last_event_at <= $%d", argIndex)
 		args = append(args, endDate+" 23:59:59")
 	}
 
-	query += " ORDER BY last_event_at DESC"
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex+1, argIndex+2)
+	innerQuery += " ORDER BY last_event_at DESC"
+	innerQuery += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex+1, argIndex+2)
 	args = append(args, limit, offset)
+
+	query := fmt.Sprintf(`
+		SELECT s.message_id, s.email, s.subject, s.source, s.latest_status, s.latest_event, s.first_event_at, s.last_event_at, COALESCE(s.recipients_dict, '{}'::jsonb)
+		FROM (%s) AS page
+		JOIN ses_message_summaries s ON s.message_id = page.message_id
+		ORDER BY s.last_event_at DESC
+	`, innerQuery)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -371,7 +380,7 @@ func (r *sesEventRepo) GetEventGroupCount(ctx context.Context, search, startDate
 		estimateQuery := `SELECT reltuples::bigint FROM pg_class WHERE relname = 'ses_message_summaries'`
 		var count int
 		err := r.db.QueryRowContext(ctx, estimateQuery).Scan(&count)
-		if err == nil && count > 10000 { // If accurate enough estimate, return it immediately
+		if err == nil && count > 1000 { // Use estimate if it's reasonably large, avoiding slow COUNT(*)
 			return count, nil
 		}
 	}
