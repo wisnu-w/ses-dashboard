@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Mail, Search, Menu, X, LogOut, FileText, Ban, Settings, Users, Layers } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { authService } from '../services/api';
 import ChangePassword from './ChangePassword';
 
 interface LayoutProps {
@@ -13,12 +13,13 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const { logout, user } = useAuth();
+  
+  const user = authService.getCurrentUser();
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = () => {
-    logout();
+    authService.logout();
     navigate('/login');
   };
 
@@ -29,7 +30,7 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
   }, []);
 
   const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { name: 'Event Logs', icon: Mail, path: '/events' },
     { name: 'Analytics', icon: Search, path: '/analytics' },
     { name: 'Suppression List', icon: Ban, path: '/suppression' },
@@ -117,8 +118,8 @@ const Layout = ({ children, title = 'SES Dashboard' }: LayoutProps) => {
               {user?.username?.charAt(0).toUpperCase() || 'A'}
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-slate-700">{user?.username}</p>
-              <p className="text-xs text-slate-500 capitalize">{user?.role}</p>
+              <p className="text-sm font-medium text-slate-700">{user?.username || 'Admin'}</p>
+              <p className="text-xs text-slate-500 capitalize">{user?.role || 'User'}</p>
             </div>
           </div>
           
